@@ -48,6 +48,7 @@ static int test()
 	if( ! ( nret == 0 ) )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
 		return -1;
 	}
 	else
@@ -67,6 +68,7 @@ static int test()
 	if( ! ( nret == 0 ) )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
 		return -1;
 	}
 	else
@@ -81,6 +83,7 @@ static int test()
 	if( ! ( nret == 0 ) )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
 		return -1;
 	}
 	else
@@ -92,6 +95,7 @@ static int test()
 	if( ! ( nret == 0 ) )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
 		return -1;
 	}
 	else
@@ -103,6 +107,7 @@ static int test()
 	if( ! ( nret != 0 ) )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
 		return -1;
 	}
 	else
@@ -114,6 +119,7 @@ static int test()
 	if( ! ( nret != 0 ) )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
 		return -1;
 	}
 	else
@@ -125,6 +131,7 @@ static int test()
 	if( ! ( nret != 0 ) )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
 		return -1;
 	}
 	else
@@ -139,6 +146,7 @@ static int test()
 	if( ! ( nret == FASTERHTTP_ERROR_HTTP_TRUNCATION ) )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
 		return -1;
 	}
 	else
@@ -147,6 +155,8 @@ static int test()
 	}
 	
 	DestroyHttpEnv( e );
+	
+	printf( "ALL is ok!!!\n" );
 	
 	return 0;
 }

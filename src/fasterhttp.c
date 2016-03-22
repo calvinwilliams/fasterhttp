@@ -167,7 +167,7 @@ void TravelHttpHeaders( struct HttpEnv *e )
 	{
 		if( p->key_ptr )
 		{
-			printf( "TravelHttpHeaders - [%.*s][%.*s]\n" , p->key_len , p->key_ptr , p->value_len , p->value_ptr );
+			printf( "TravelHttpHeaders - [%.*s][%.*s]\n" , (int)(p->key_len) , p->key_ptr , (int)(p->value_len) , p->value_ptr );
 		}
 	}
 	
@@ -429,7 +429,7 @@ void TravelHttpBody( struct HttpEnv *e )
 {
 	if( e->headers.content_length > 0 && e->body )
 	{
-		printf( "TravelHttpBody - body - [%.*s]\n" , e->headers.content_length , e->body );
+		printf( "TravelHttpBody - body - [%.*s]\n" , (int)(e->headers.content_length) , e->body );
 	}
 	
 	return;
