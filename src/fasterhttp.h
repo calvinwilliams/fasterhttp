@@ -83,6 +83,7 @@ extern "C" {
 
 #define FASTERHTTP_ERROR_ALLOC				-11
 #define FASTERHTTP_ERROR_PARAMTER			-12
+#define FASTERHTTP_ERROR_USING				-13
 #define FASTERHTTP_ERROR_INTERNAL			-14
 #define FASTERHTTP_ERROR_TCP_SELECT_RECEIVE		-31
 #define FASTERHTTP_ERROR_TCP_SELECT_RECEIVE_TIMEOUT	-32
@@ -101,6 +102,7 @@ extern "C" {
 #define FASTERHTTP_ERROR_NOT_FOUND			-404
 #define FASTERHTTP_ERROR_METHOD_INVALID			-405
 #define FASTERHTTP_ERROR_URI_TOOLONG			-414
+#define FASTERHTTP_ERROR_METHOD_NOT_SUPPORTED		-504
 #define FASTERHTTP_ERROR_VERSION_NOT_SUPPORTED		-505
 
 #define FASTERHTTP_TIMEOUT_DEFAULT			60
@@ -157,6 +159,7 @@ _WINDLL_FUNC int StrcatHttpBuffer( struct HttpBuffer *b , char *str );
 _WINDLL_FUNC int StrcatfHttpBuffer( struct HttpBuffer *b , char *format , ... );
 _WINDLL_FUNC int StrcatvHttpBuffer( struct HttpBuffer *b , char *format , va_list valist );
 _WINDLL_FUNC int MemcatHttpBuffer( struct HttpBuffer *b , char *base , long len );
+_WINDLL_FUNC void SetHttpBufferPtr( struct HttpBuffer *b , char *ptr , long buf_size );
 
 /* http client advance api */
 _WINDLL_FUNC int RequestHttp( SOCKET sock , SSL *ssl , struct HttpEnv *e );
@@ -168,11 +171,9 @@ _WINDLL_FUNC int ResponseHttp( SOCKET sock , SSL *ssl , struct HttpEnv *e , func
 /* http client api */
 _WINDLL_FUNC int SendHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e );
 _WINDLL_FUNC int ReceiveHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e );
-_WINDLL_FUNC int ParseHttpResponse( struct HttpEnv *e );
 
 /* http server api */
 _WINDLL_FUNC int ReceiveHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e );
-_WINDLL_FUNC int ParseHttpRequest( struct HttpEnv *e );
 _WINDLL_FUNC int SendHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e );
 
 /* http client api with nonblock */
@@ -182,6 +183,10 @@ _WINDLL_FUNC int ReceiveHttpResponseNonblock( SOCKET sock , SSL *ssl , struct Ht
 /* http server api with nonblock */
 _WINDLL_FUNC int ReceiveHttpRequestNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e );
 _WINDLL_FUNC int SendHttpResponseNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e );
+
+/* http test api */
+_WINDLL_FUNC int ParseHttpResponse( struct HttpEnv *e );
+_WINDLL_FUNC int ParseHttpRequest( struct HttpEnv *e );
 
 /* http data */
 _WINDLL_FUNC char *GetHttpHeaderPtr_METHOD( struct HttpEnv *e , long *p_value_len );

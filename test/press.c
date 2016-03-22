@@ -1,5 +1,7 @@
 #include "fasterhttp.h"
 
+#define DEBUG		0
+
 #define REQ                                                                                                                        \
     "GET /wp-content/uploads/2010/03/hello-kitty-darth-vader-pink.jpg HTTP/1.1\r\n"                                                \
     "Host: www.kittyhell.com\r\n"                                                                                                  \
@@ -20,7 +22,6 @@ static int test( int count )
 {
 	struct HttpEnv		*e = NULL ;
 	int			i ;
-	int			REQ_LEN = sizeof(REQ)-1 ;
 	struct HttpBuffer	*b = NULL ;
 	int			nret = 0 ;
 	
@@ -31,15 +32,9 @@ static int test( int count )
 		return -1;
 	}
 	
-	/*
+#if DEBUG
 	b = GetHttpRequestBuffer( e ) ;
-	nret = MemcatHttpBuffer( b , REQ , REQ_LEN ) ;
-	if( nret )
-	{
-		printf( "StrcatfHttpBuffer failed[%d]\n" , nret );
-		DestroyHttpEnv( e );
-		return -1;
-	}
+	SetHttpBufferPtr( b , REQ , sizeof(REQ) );
 	
 	nret = ParseHttpRequest( e ) ;
 	if( nret )
@@ -67,20 +62,14 @@ static int test( int count )
 			printf( "HTTP BODY [%.*s]\n" , GetHttpBodyLen(e) , GetHttpBodyPtr(e,NULL) );
 		}
 	}
-	*/
+#endif
 	
 	for( i = 0 ; i < count ; i++ )
 	{
 		ResetHttpEnv( e );
 		
 		b = GetHttpRequestBuffer( e ) ;
-		nret = MemcatHttpBuffer( b , REQ , REQ_LEN ) ;
-		if( nret )
-		{
-			printf( "StrcatfHttpBuffer failed[%d]\n" , nret );
-			DestroyHttpEnv( e );
-			return -1;
-		}
+		SetHttpBufferPtr( b , REQ , sizeof(REQ) ) ;
 		
 		nret = ParseHttpRequest( e ) ;
 		if( nret )
