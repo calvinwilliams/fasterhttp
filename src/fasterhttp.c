@@ -737,6 +737,40 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 	return nret;
 }
 
+int RequestHttp( int sock , SSL *ssl , struct HttpEnv *e )
+{
+	int		nret = 0 ;
+	
+	nret = SendHttpRequest( sock , ssl , e ) ;
+	if( nret )
+		return nret;
+	
+	nret = ReceiveHttpResponse( sock , ssl , e ) ;
+	if( nret )
+		return nret;
+	
+	return 0;
+}
+
+int ResponseHttp( int sock , SSL *ssl , struct HttpEnv *e , funcProcessHttpRequest *pfuncProcessHttpRequest , void *p )
+{
+	int		nret = 0 ;
+	
+	nret = ReceiveHttpRequest( sock , ssl , e ) ;
+	if( nret )
+		return nret;
+	
+	nret = pfuncProcessHttpRequest( e , p ) ;
+	if( nret )
+		return nret;
+	
+	nret = SendHttpResponse( sock , ssl , e ) ;
+	if( nret )
+		return nret;
+	
+	return 0;
+}
+
 int SendHttpRequest( int sock , SSL *ssl , struct HttpEnv *e )
 {
 	int		nret = 0 ;

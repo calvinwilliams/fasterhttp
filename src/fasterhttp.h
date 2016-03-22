@@ -140,6 +140,13 @@ _WINDLL_FUNC int ReallocHttpBuffer( struct HttpBuffer *b , long new_buf_size );
 _WINDLL_FUNC int StrcatfHttpBuffer( struct HttpBuffer *b , char *format , ... );
 _WINDLL_FUNC int MemcatHttpBuffer( struct HttpBuffer *b , char *base , long len );
 
+/* http client advance api */
+_WINDLL_FUNC int RequestHttp( int sock , SSL *ssl , struct HttpEnv *e );
+
+/* http server advance api */
+typedef int funcProcessHttpRequest( struct HttpEnv *e , void *p );
+_WINDLL_FUNC int ResponseHttp( int sock , SSL *ssl , struct HttpEnv *e , funcProcessHttpRequest *pfuncProcessHttpRequest , void *p );
+
 /* http client api */
 _WINDLL_FUNC int SendHttpRequest( int sock , SSL *ssl , struct HttpEnv *e );
 _WINDLL_FUNC int ReceiveHttpResponse( int sock , SSL *ssl , struct HttpEnv *e );
