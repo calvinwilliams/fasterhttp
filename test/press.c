@@ -16,23 +16,24 @@
     "__utmz=xxxxxxxxx.xxxxxxxxxx.x.x.utmccn=(referral)|utmcsr=reader.livedoor.com|utmcct=/reader/|utmcmd=referral\r\n"             \
     "\r\n"
 
-static int test()
+static int test( int count )
 {
 	struct HttpEnv		*e = NULL ;
-	struct HttpBuffer	*b = NULL ;
 	int			i ;
+	int			REQ_LEN = sizeof(REQ)-1 ;
+	struct HttpBuffer	*b = NULL ;
 	int			nret = 0 ;
 	
 	e = CreateHttpEnv() ;
-	
 	if( e == NULL )
 	{
 		printf( "CreateHttpEnv failed\n" );
 		return -1;
 	}
 	
+	/*
 	b = GetHttpRequestBuffer( e ) ;
-	nret = StrcatHttpBuffer( b , REQ ) ;
+	nret = MemcatHttpBuffer( b , REQ , REQ_LEN ) ;
 	if( nret )
 	{
 		printf( "StrcatfHttpBuffer failed[%d]\n" , nret );
@@ -66,13 +67,14 @@ static int test()
 			printf( "HTTP BODY [%.*s]\n" , GetHttpBodyLen(e) , GetHttpBodyPtr(e,NULL) );
 		}
 	}
+	*/
 	
-	for( i = 0 ; i < 10000000 ; i++ )
+	for( i = 0 ; i < count ; i++ )
 	{
 		ResetHttpEnv( e );
 		
 		b = GetHttpRequestBuffer( e ) ;
-		nret = StrcatHttpBuffer( b , REQ ) ;
+		nret = MemcatHttpBuffer( b , REQ , REQ_LEN ) ;
 		if( nret )
 		{
 			printf( "StrcatfHttpBuffer failed[%d]\n" , nret );
@@ -94,8 +96,16 @@ static int test()
 	return 0;
 }
 
-int main()
+int main( int argc , char *argv[] )
 {
-	return -test();
+	if( argc == 1 + 1 )
+	{
+		return -test( atoi(argv[1]) );
+	}
+	else
+	{
+		printf( "USAGE : press count\n" );
+		exit(9);
+	}
 }
 
