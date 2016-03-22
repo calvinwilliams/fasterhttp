@@ -14,13 +14,19 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdarg.h>
+
+#if ( defined _WIN32 )
+#include <winsock2.h>
+#include <windows.h>
+#elif ( defined __unix ) || ( defined __linux__ )
+#include <unistd.h>
 #include <sys/time.h>
-#include <sys/time.h>
+#endif
+
 #include <openssl/ssl.h>
 
 #if ( defined _WIN32 )
@@ -60,6 +66,10 @@ extern "C" {
 #define SNPRINTF        snprintf
 #define VSNPRINTF       vsnprintf
 #endif
+#endif
+
+#if ( defined __unix ) || ( defined __linux__ )
+#define SOCKET		int
 #endif
 
 #define FASTERHTTP_ERROR_ALLOC				-11
@@ -148,22 +158,22 @@ typedef int funcProcessHttpRequest( struct HttpEnv *e , void *p );
 _WINDLL_FUNC int ResponseHttp( int sock , SSL *ssl , struct HttpEnv *e , funcProcessHttpRequest *pfuncProcessHttpRequest , void *p );
 
 /* http client api */
-_WINDLL_FUNC int SendHttpRequest( int sock , SSL *ssl , struct HttpEnv *e );
-_WINDLL_FUNC int ReceiveHttpResponse( int sock , SSL *ssl , struct HttpEnv *e );
+_WINDLL_FUNC int SendHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e );
+_WINDLL_FUNC int ReceiveHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e );
 _WINDLL_FUNC int ParseHttpResponse( struct HttpEnv *e );
 
 /* http server api */
-_WINDLL_FUNC int ReceiveHttpRequest( int sock , SSL *ssl , struct HttpEnv *e );
+_WINDLL_FUNC int ReceiveHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e );
 _WINDLL_FUNC int ParseHttpRequest( struct HttpEnv *e );
-_WINDLL_FUNC int SendHttpResponse( int sock , SSL *ssl , struct HttpEnv *e );
+_WINDLL_FUNC int SendHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e );
 
 /* http client api with nonblock */
-_WINDLL_FUNC int SendHttpRequestNonblock( int sock , SSL *ssl , struct HttpEnv *e );
-_WINDLL_FUNC int ReceiveHttpResponseNonblock( int sock , SSL *ssl , struct HttpEnv *e );
+_WINDLL_FUNC int SendHttpRequestNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e );
+_WINDLL_FUNC int ReceiveHttpResponseNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e );
 
 /* http server api with nonblock */
-_WINDLL_FUNC int ReceiveHttpRequestNonblock( int sock , SSL *ssl , struct HttpEnv *e );
-_WINDLL_FUNC int SendHttpResponseNonblock( int sock , SSL *ssl , struct HttpEnv *e );
+_WINDLL_FUNC int ReceiveHttpRequestNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e );
+_WINDLL_FUNC int SendHttpResponseNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e );
 
 /* http headers */
 _WINDLL_FUNC char *GetHttpHeaderPtr( struct HttpEnv *e , char *key , long *p_value_len );

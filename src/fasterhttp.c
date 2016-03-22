@@ -367,19 +367,24 @@ int MemcatHttpBuffer( struct HttpBuffer *b , char *base , long len )
 
 static void AjustTimeval( struct timeval *ptv , struct timeval *t1 , struct timeval *t2 )
 {
+#if ( defined _WIN32 )
+	ptv->tv_sec -= ( t2->tv_sec - t1->tv_sec ) ;
+#elif ( defined __unix ) || ( defined __linux__ )
 	ptv->tv_sec -= ( t2->tv_sec - t1->tv_sec ) ;
 	ptv->tv_usec -= ( t2->tv_usec - t1->tv_usec ) ;
-	
 	while( ptv->tv_usec < 0 )
 	{
 		ptv->tv_usec += 1000000 ;
 		ptv->tv_sec--;
 	}
+#endif
+	if( ptv->tv_sec < 0 )
+		ptv->tv_sec = 0 ;
 	
 	return;
 }
 
-static int SendHttpBuffer( int sock , SSL *ssl , struct HttpEnv *e , struct HttpBuffer *b )
+static int SendHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpBuffer *b )
 {
 	struct timeval	t1 , t2 ;
 	fd_set		write_fds ;
@@ -389,7 +394,11 @@ static int SendHttpBuffer( int sock , SSL *ssl , struct HttpEnv *e , struct Http
 	if( b->process_len >= b->fill_len )
 		return 0;
 	
+#if ( defined _WIN32 )
+	time( &(t1.tv_sec) );
+#elif ( defined __unix ) || ( defined __linux__ )
 	gettimeofday( & t1 , NULL );
+#endif
 	
 	FD_ZERO( & write_fds );
 	FD_SET( sock , & write_fds );
@@ -405,13 +414,17 @@ static int SendHttpBuffer( int sock , SSL *ssl , struct HttpEnv *e , struct Http
 	}
 	
 	if( ssl == NULL )
-		len = write( sock , b->process_ptr , b->fill_len-b->process_len ) ;
+		len = send( sock , b->process_ptr , b->fill_len-b->process_len , 0 ) ;
 	else
 		len = SSL_write( ssl , b->process_ptr , b->fill_len-b->process_len ) ;
 	if( len == -1 )
 		return FASTERHTTP_ERROR_TCP_SEND;
 	
+#if ( defined _WIN32 )
+	time( &(t2.tv_sec) );
+#elif ( defined __unix ) || ( defined __linux__ )
 	gettimeofday( & t2 , NULL );
+#endif
 	AjustTimeval( & (e->timeout) , & t1 , & t2 );
 	
 	b->process_ptr += len ;
@@ -423,7 +436,7 @@ static int SendHttpBuffer( int sock , SSL *ssl , struct HttpEnv *e , struct Http
 		return FASTERHTTP_INFO_TCP_SEND_WOULDBLOCK;
 }
 
-static int ReceiveHttpBuffer( int sock , SSL *ssl , struct HttpEnv *e , struct HttpBuffer *b )
+static int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpBuffer *b )
 {
 	struct timeval	t1 , t2 ;
 	fd_set		read_fds ;
@@ -437,7 +450,11 @@ static int ReceiveHttpBuffer( int sock , SSL *ssl , struct HttpEnv *e , struct H
 			return nret;
 	}
 	
+#if ( defined _WIN32 )
+	time( &(t1.tv_sec) );
+#elif ( defined __unix ) || ( defined __linux__ )
 	gettimeofday( & t1 , NULL );
+#endif
 	
 	FD_ZERO( & read_fds );
 	FD_SET( sock , & read_fds );
@@ -453,7 +470,7 @@ static int ReceiveHttpBuffer( int sock , SSL *ssl , struct HttpEnv *e , struct H
 	}
 	
 	if( ssl == NULL )
-		len = (long)read( sock , b->fill_ptr , FASTERHTTP_READBLOCK_SIZE_DEFAULT ) ;
+		len = (long)recv( sock , b->fill_ptr , FASTERHTTP_READBLOCK_SIZE_DEFAULT , 0 ) ;
 	else
 		len = (long)SSL_read( ssl , b->fill_ptr , FASTERHTTP_READBLOCK_SIZE_DEFAULT ) ;
 	if( len == -1 )
@@ -461,7 +478,11 @@ static int ReceiveHttpBuffer( int sock , SSL *ssl , struct HttpEnv *e , struct H
 	else if( len == 0 )
 		return FASTERHTTP_ERROR_HTTP_TRUNCATION;
 	
+#if ( defined _WIN32 )
+	time( &(t2.tv_sec) );
+#elif ( defined __unix ) || ( defined __linux__ )
 	gettimeofday( & t2 , NULL );
+#endif
 	AjustTimeval( & (e->timeout) , & t1 , & t2 );
 	
 	b->fill_ptr += len ;
@@ -737,6 +758,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 	return nret;
 }
 
+<<<<<<< HEAD
 int RequestHttp( int sock , SSL *ssl , struct HttpEnv *e )
 {
 	int		nret = 0 ;
@@ -772,6 +794,9 @@ int ResponseHttp( int sock , SSL *ssl , struct HttpEnv *e , funcProcessHttpReque
 }
 
 int SendHttpRequest( int sock , SSL *ssl , struct HttpEnv *e )
+=======
+int SendHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e )
+>>>>>>> e340bcf597daa37a32a63f03dd762cebd1de317f
 {
 	int		nret = 0 ;
 	
@@ -787,7 +812,7 @@ int SendHttpRequest( int sock , SSL *ssl , struct HttpEnv *e )
 	return 0;
 }
 
-int ReceiveHttpResponse( int sock , SSL *ssl , struct HttpEnv *e )
+int ReceiveHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 {
 	int		nret = 0 ;
 	
@@ -827,7 +852,7 @@ int ParseHttpResponse( struct HttpEnv *e )
 	return 0;
 }
 
-int ReceiveHttpRequest( int sock , SSL *ssl , struct HttpEnv *e )
+int ReceiveHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 {
 	int		nret = 0 ;
 	
@@ -867,7 +892,7 @@ int ParseHttpRequest( struct HttpEnv *e )
 	return 0;
 }
 
-int SendHttpResponse( int sock , SSL *ssl , struct HttpEnv *e )
+int SendHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 {
 	int		nret = 0 ;
 	
@@ -883,7 +908,7 @@ int SendHttpResponse( int sock , SSL *ssl , struct HttpEnv *e )
 	return 0;
 }
 
-int SendHttpRequestNonblock( int sock , SSL *ssl , struct HttpEnv *e )
+int SendHttpRequestNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 {
 	int		nret = 0 ;
 	
@@ -896,7 +921,7 @@ int SendHttpRequestNonblock( int sock , SSL *ssl , struct HttpEnv *e )
 		return 0;
 }
 
-int ReceiveHttpResponseNonblock( int sock , SSL *ssl , struct HttpEnv *e )
+int ReceiveHttpResponseNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 {
 	int		nret = 0 ;
 	
@@ -913,7 +938,7 @@ int ReceiveHttpResponseNonblock( int sock , SSL *ssl , struct HttpEnv *e )
 		return 0;
 }
 
-int ReceiveHttpRequestNonblock( int sock , SSL *ssl , struct HttpEnv *e )
+int ReceiveHttpRequestNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 {
 	int		nret = 0 ;
 	
@@ -930,7 +955,7 @@ int ReceiveHttpRequestNonblock( int sock , SSL *ssl , struct HttpEnv *e )
 		return 0;
 }
 
-int SendHttpResponseNonblock( int sock , SSL *ssl , struct HttpEnv *e )
+int SendHttpResponseNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 {
 	int		nret = 0 ;
 	
