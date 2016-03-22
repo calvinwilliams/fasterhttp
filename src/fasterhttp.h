@@ -180,7 +180,7 @@ _WINDLL_FUNC int StrcatHttpBuffer( struct HttpBuffer *b , char *str );
 _WINDLL_FUNC int StrcatfHttpBuffer( struct HttpBuffer *b , char *format , ... );
 _WINDLL_FUNC int StrcatvHttpBuffer( struct HttpBuffer *b , char *format , va_list valist );
 _WINDLL_FUNC int MemcatHttpBuffer( struct HttpBuffer *b , char *base , long len );
-_WINDLL_FUNC void SetHttpBufferPtr( struct HttpBuffer *b , char *ptr , long buf_size );
+_WINDLL_FUNC void SetHttpBufferPtr( struct HttpBuffer *b , char *ptr , long len );
 
 /* http client advance api */
 _WINDLL_FUNC int RequestHttp( SOCKET sock , SSL *ssl , struct HttpEnv *e );

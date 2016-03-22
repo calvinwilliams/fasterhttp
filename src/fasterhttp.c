@@ -411,7 +411,7 @@ int MemcatHttpBuffer( struct HttpBuffer *b , char *base , long len )
 	return 0;
 }
 
-void SetHttpBufferPtr( struct HttpBuffer *b , char *ptr , long buf_size )
+void SetHttpBufferPtr( struct HttpBuffer *b , char *ptr , long size )
 {
 	if( b->ref_flag == 0 && b->buf_size > 0 && b->base )
 	{
@@ -419,8 +419,8 @@ void SetHttpBufferPtr( struct HttpBuffer *b , char *ptr , long buf_size )
 	}
 	
 	b->base = ptr ;
-	b->buf_size = buf_size ;
-	b->fill_ptr = b->base ;
+	b->buf_size = size ;
+	b->fill_ptr = b->base + size-1 ;
 	b->process_ptr = b->base ;
 	
 	b->ref_flag = 1 ;
@@ -889,11 +889,43 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 }
 #endif
 
+#define DEBUG_TIMEVAL	0
+
+#if DEBUG_TIMEVAL
+static void DebugTimeval( char *text , char *p )
+{
+	static struct timeval	tv1 = { 0 , 0 } , tv2 = { 0 , 0 } , tvdiff = { 0 , 0 } ;
+	
+	gettimeofday( & tv2 , NULL );
+	
+	tvdiff.tv_sec = ( tv2.tv_sec - tv1.tv_sec ) ;
+	tvdiff.tv_usec = ( tv2.tv_usec - tv1.tv_usec ) ;
+	while( tvdiff.tv_usec < 0 )
+	{
+		tvdiff.tv_usec += 1000000 ;
+		tvdiff.tv_sec--;
+	}
+	if( tvdiff.tv_sec < 0 )
+		tvdiff.tv_sec = 0 ;
+	
+	printf( "tvdiff[%06ld.%06ld] [%s] [%.20s]\n" , tvdiff.tv_sec , tvdiff.tv_usec , text , p );
+	
+	tv1.tv_sec = tv2.tv_sec ;
+	tv1.tv_usec = tv2.tv_usec ;
+	
+	return;
+}
+#endif
+
 int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 {
-	char	*p = b->process_ptr ;
-	char	*p2 = NULL ;
-	int	nret = 0 ;
+	register char	*p = b->process_ptr ;
+	char		*p2 = NULL ;
+	int		nret = 0 ;
+	
+#if DEBUG_TIMEVAL
+	DebugTimeval( "init" , p );
+#endif
 	
 	if( e->parse_step == FASTERHTTP_PARSESTEP_BEGIN )
 	{
@@ -911,9 +943,17 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 		}
 	}
 	
+#if DEBUG_TIMEVAL
+	DebugTimeval( "FASTERHTTP_PARSESTEP_BEGIN" , p );
+#endif
+	
 	switch( e->parse_step )
 	{
 		case FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_METHOD0 :
+			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_METHOD0" , p );
+#endif
 			
 			for( ; (*p) == ' ' && p < b->fill_ptr ; p++ )
 				;
@@ -932,6 +972,10 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			e->parse_step = FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_METHOD ;
 			
 		case FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_METHOD :
+			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_METHOD" , p );
+#endif
 			
 			for( ; (*p) != ' ' && (*p) != HTTP_NEWLINE && p < b->fill_ptr ; p++ )
 				;
@@ -993,6 +1037,10 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			
 		case FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_URI0 :
 			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_URI0" , p );
+#endif
+			
 			for( ; (*p) == ' ' && p < b->fill_ptr ; p++ )
 				;
 			if( p >= b->fill_ptr )
@@ -1011,6 +1059,10 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			
 		case FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_URI :
 			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_URI" , p );
+#endif
+			
 			for( ; (*p) != ' ' && (*p) != HTTP_NEWLINE && p < b->fill_ptr ; p++ )
 				;
 			if( p >= b->fill_ptr )
@@ -1026,6 +1078,10 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			e->parse_step = FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_VERSION0 ;
 			
 		case FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_VERSION0 :
+			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_VERSION0" , p );
+#endif
 			
 			for( ; (*p) == ' ' && p < b->fill_ptr ; p++ )
 				;
@@ -1044,6 +1100,10 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			e->parse_step = FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_VERSION ;
 			
 		case FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_VERSION :
+			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_VERSION" , p );
+#endif
 			
 			for( ; (*p) != ' ' && (*p) != HTTP_NEWLINE && p < b->fill_ptr ; p++ )
 				;
@@ -1078,6 +1138,10 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			
 		case FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_VERSION0 :
 			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_VERSION0" , p );
+#endif
+			
 			for( ; (*p) == ' ' && p < b->fill_ptr ; p++ )
 				;
 			if( p >= b->fill_ptr )
@@ -1095,6 +1159,10 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			e->parse_step = FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_VERSION ;
 			
 		case FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_VERSION :
+			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_VERSION" , p );
+#endif
 			
 			for( ; (*p) != ' ' && (*p) != HTTP_NEWLINE && p < b->fill_ptr ; p++ )
 				;
@@ -1126,6 +1194,10 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			
 		case FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_STATUSCODE0 :
 			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_STATUSCODE0" , p );
+#endif
+			
 			for( ; (*p) == ' ' && p < b->fill_ptr ; p++ )
 				;
 			if( p >= b->fill_ptr )
@@ -1143,6 +1215,10 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			
 		case FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_STATUSCODE :
 			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_STATUSCODE" , p );
+#endif
+			
 			for( ; (*p) != ' ' && (*p) != HTTP_NEWLINE && p < b->fill_ptr ; p++ )
 				;
 			if( p >= b->fill_ptr )
@@ -1158,6 +1234,10 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			e->parse_step = FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_REASONPHRASE0 ;
 			
 		case FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_REASONPHRASE0 :
+			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_REASONPHRASE0" , p );
+#endif
 			
 			for( ; (*p) == ' ' && p < b->fill_ptr ; p++ )
 				;
@@ -1176,6 +1256,10 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			e->parse_step = FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_REASONPHRASE ;
 			
 		case FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_REASONPHRASE :
+			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_REASONPHRASE" , p );
+#endif
 			
 			for( ; (*p) != ' ' && (*p) != HTTP_NEWLINE && p < b->fill_ptr ; p++ )
 				;
@@ -1197,6 +1281,10 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 		case FASTERHTTP_PARSESTEP_HEADER_NAME0 :
 			
 _GOTO_PARSESTEP_HEADER_NAME0 :
+			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_HEADER_NAME0" , p );
+#endif
 			
 			for( ; (*p) == ' ' && p < b->fill_ptr ; p++ )
 				;
@@ -1249,6 +1337,10 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			
 		case FASTERHTTP_PARSESTEP_HEADER_NAME :
 			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_HEADER_NAME" , p );
+#endif
+			
 			for( ; (*p) != ' ' && (*p) != ':' && (*p) != HTTP_NEWLINE && p < b->fill_ptr ; p++ )
 				;
 			if( p >= b->fill_ptr )
@@ -1275,6 +1367,10 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			
 		case FASTERHTTP_PARSESTEP_HEADER_VALUE0 :
 			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_HEADER_VALUE0" , p );
+#endif
+			
 			for( ; (*p) == ' ' && p < b->fill_ptr ; p++ )
 				;
 			if( p >= b->fill_ptr )
@@ -1290,6 +1386,10 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			e->parse_step = FASTERHTTP_PARSESTEP_HEADER_VALUE ;
 			
 		case FASTERHTTP_PARSESTEP_HEADER_VALUE :
+			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_HEADER_VALUE" , p );
+#endif
 			
 			for( ; (*p) != HTTP_NEWLINE && p < b->fill_ptr ; p++ )
 				;
@@ -1319,6 +1419,10 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			
 _GOTO_PARSESTEP_BODY :
 			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_BODY" , p );
+#endif
+			
 			if( b->fill_ptr - e->body >= e->headers.content_length )
 			{
 				b->process_ptr = b->fill_ptr ;
@@ -1332,6 +1436,10 @@ _GOTO_PARSESTEP_BODY :
 			}
 		
 		case FASTERHTTP_PARSESTEP_DONE :
+			
+#if DEBUG_TIMEVAL
+			DebugTimeval( "FASTERHTTP_PARSESTEP_DONE" , p );
+#endif
 			
 			return 0;
 
