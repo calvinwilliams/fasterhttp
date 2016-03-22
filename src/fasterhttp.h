@@ -77,8 +77,9 @@ extern "C" {
 #define FASTERHTTP_ERROR_FD_SELECT_READ_TIMEOUT		-52
 #define FASTERHTTP_ERROR_FD_READ			-53
 #define FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER		100
-#define FASTERHTTP_ERROR_HTTP_TRUNCATION		-101
-#define FASTERHTTP_ERROR_HTTP_HEADERLINE_INVALID	-102
+#define FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID	-101
+#define FASTERHTTP_ERROR_HTTP_HEADER_INVALID		-102
+#define FASTERHTTP_ERROR_HTTP_TRUNCATION		-103
 #define FASTERHTTP_ERROR_HTTP_PROCESSING		-104
 
 #define FASTERHTTP_ERROR_NO_CONTENT			-204
@@ -95,25 +96,41 @@ extern "C" {
 
 #define FASTERHTTP_REQUEST_BUFSIZE_MAX			10*1024*1024
 #define FASTERHTTP_RESPONSE_BUFSIZE_MAX			10*1024*1024
-#define FASTERHTTP_HEADER_ITEM_ARRAYSIZE_MAX		256
+#define FASTERHTTP_HEADER_ITEM_ARRAYSIZE_MAX		1024
 
 #define FASTERHTTP_PARSE_STEP_FIRSTLINE			0
 #define FASTERHTTP_PARSE_STEP_HEADER			1
 #define FASTERHTTP_PARSE_STEP_BODY			2
 #define FASTERHTTP_PARSE_STEP_DONE			3
 
-#define HTTP_METHOD_POST				"POST"
+#define HTTP_NEWLINE					"\r\n"
+#define HTTP_NEWLINE_RETURN				'\r'
+
 #define HTTP_METHOD_GET					"GET"
+#define HTTP_METHOD_POST				"POST"
+#define HTTP_METHOD_HEAD				"HEAD"
+#define HTTP_METHOD_TRACE				"TRACE"
+#define HTTP_METHOD_OPTIONS				"OPTIONS"
+#define HTTP_METHOD_PUT					"PUT"
+#define HTTP_METHOD_DELETE				"DELETE"
+
+#define HTTP_VERSION_1_0				"HTTP/1.0"
+#define HTTP_VERSION_1_1				"HTTP/1.1"
+
+#define HTTP_HEADER_CONTENT_LENGTH			"Content-Length"
 
 struct HttpBuffer ;
 struct HttpEnv ;
 
+/* http env */
 _WINDLL_FUNC struct HttpEnv *CreateHttpEnv();
 _WINDLL_FUNC void ResetHttpEnv( struct HttpEnv *e );
 _WINDLL_FUNC void DestroyHttpEnv( struct HttpEnv *e );
 
+/* properties */
 _WINDLL_FUNC void SetHttpTimeout( struct HttpEnv *e , long timeout );
 
+/* buffer operations */
 _WINDLL_FUNC struct HttpBuffer *GetHttpRequestBuffer( struct HttpEnv *e );
 _WINDLL_FUNC struct HttpBuffer *GetHttpResponseBuffer( struct HttpEnv *e );
 _WINDLL_FUNC char *GetHttpBufferBase( struct HttpBuffer *b );
@@ -122,16 +139,27 @@ _WINDLL_FUNC void CleanHttpBuffer( struct HttpBuffer *b );
 _WINDLL_FUNC int ReallocHttpBuffer( struct HttpBuffer *b , long new_buf_size );
 _WINDLL_FUNC int StrcatfHttpBuffer( struct HttpBuffer *b , char *format , ... );
 _WINDLL_FUNC int MemcatHttpBuffer( struct HttpBuffer *b , char *base , long len );
-_WINDLL_FUNC int WriteHttpBuffer( int sock , SSL *ssl , struct HttpEnv *e , struct HttpBuffer *b );
-_WINDLL_FUNC int ReadHttpBuffer( int sock , SSL *ssl , struct HttpEnv *e , struct HttpBuffer *b );
 
+/* http client api */
 _WINDLL_FUNC int SendHttpRequest( int sock , SSL *ssl , struct HttpEnv *e );
 _WINDLL_FUNC int ReceiveHttpResponse( int sock , SSL *ssl , struct HttpEnv *e );
 _WINDLL_FUNC int ParseHttpResponse( struct HttpEnv *e );
 
+/* http server api */
 _WINDLL_FUNC int ReceiveHttpRequest( int sock , SSL *ssl , struct HttpEnv *e );
 _WINDLL_FUNC int ParseHttpRequest( struct HttpEnv *e );
 _WINDLL_FUNC int SendHttpResponse( int sock , SSL *ssl , struct HttpEnv *e );
+
+/* http client api with nonblock */
+_WINDLL_FUNC int SendHttpRequestNonblock( int sock , SSL *ssl , struct HttpEnv *e );
+_WINDLL_FUNC int ReceiveHttpResponseNonblock( int sock , SSL *ssl , struct HttpEnv *e );
+
+/* http server api with nonblock */
+_WINDLL_FUNC int ReceiveHttpRequestNonblock( int sock , SSL *ssl , struct HttpEnv *e );
+_WINDLL_FUNC int SendHttpResponseNonblock( int sock , SSL *ssl , struct HttpEnv *e );
+
+/* http headers */
+_WINDLL_FUNC char *GetHttpHeaderPtr( struct HttpEnv *e , char *key , long *p_value_len );
 
 #endif
 
