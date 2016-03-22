@@ -4,8 +4,8 @@ static int test()
 {
 	struct HttpEnv		*e = NULL ;
 	struct HttpBuffer	*b = NULL ;
-	
 	int			nret = 0 ;
+	
 	e = CreateHttpEnv() ;
 	if( e == NULL )
 	{
@@ -28,7 +28,7 @@ static int test()
 					"xyz" ) ;
 	if( nret )
 	{
-		printf( "StrcatfHttpBuffer failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		printf( "StrcatfHttpBuffer failed[%d]\n" , nret );
 		DestroyHttpEnv( e );
 		return -1;
 	}
@@ -53,7 +53,7 @@ static int test()
 			printf( "HTTP BODY [%.*s]\n" , GetHttpBodyLen(e) , GetHttpBodyPtr(e,NULL) );
 		}
 	}
-	if( nret )
+	else if( nret )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );

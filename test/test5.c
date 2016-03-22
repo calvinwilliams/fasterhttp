@@ -194,19 +194,25 @@ int test4()
 
 int main()
 {
+#if ( defined _WIN32 )
 	WSADATA		wsaData;
+#endif
 	int		nret = 0 ;
 	
+#if ( defined _WIN32 )
 	nret = WSAStartup( MAKEWORD( 2, 2 ), &wsaData ) ;
 	if( nret )
 	{
 		printf( "WSAStartup failed[%d] , errno[%d]\n" , nret , GetLastError() );
 		return 1;
 	}
+#endif
 	
 	nret = test4() ;
 
+#if ( defined _WIN32 )
 	WSACleanup();
+#endif
 
 	return -nret;
 }

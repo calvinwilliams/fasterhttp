@@ -26,6 +26,9 @@ extern "C" {
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
 #endif
 
 #include <openssl/ssl.h>

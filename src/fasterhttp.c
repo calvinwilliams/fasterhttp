@@ -222,8 +222,12 @@ void ResetHttpEnv( struct HttpEnv *e )
 	
 	if( e->request_buffer.buf_size > FASTERHTTP_REQUEST_BUFSIZE_MAX )
 		ReallocHttpBuffer( &(e->request_buffer) , FASTERHTTP_REQUEST_BUFSIZE_DEFAULT );
+	CleanHttpBuffer( &(e->request_buffer) );
 	if( e->response_buffer.buf_size > FASTERHTTP_RESPONSE_BUFSIZE_MAX )
 		ReallocHttpBuffer( &(e->response_buffer) , FASTERHTTP_RESPONSE_BUFSIZE_DEFAULT );
+	CleanHttpBuffer( &(e->response_buffer) );
+	
+	e->parse_step = FASTERHTTP_PARSE_STEP_FIRSTLINE ;
 	
 	e->headers.content_length = 0 ;
 	
@@ -238,13 +242,8 @@ void ResetHttpEnv( struct HttpEnv *e )
 			e->headers.header_array_size = FASTERHTTP_HEADER_ARRAYSIZE_DEFAULT ;
 		}
 	}
-	
-	CleanHttpBuffer( &(e->request_buffer) );
-	CleanHttpBuffer( &(e->response_buffer) );
-	
 	CleanHttpHeader( &(e->headers) );
 	
-	e->parse_step = FASTERHTTP_PARSE_STEP_FIRSTLINE ;
 	e->body = NULL ;
 	
 	return;
@@ -1116,8 +1115,6 @@ int GetHttpHeaderCount( struct HttpEnv *e )
 
 struct HttpHeader *TravelHttpHeaderPtr( struct HttpEnv *e , struct HttpHeader *p_header )
 {
-	struct HttpHeader	*p = NULL ;
-	
 	if( p_header == NULL )
 		p_header = e->headers.header_array ;
 	else
