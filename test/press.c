@@ -18,6 +18,8 @@
     "__utmz=xxxxxxxxx.xxxxxxxxxx.x.x.utmccn=(referral)|utmcsr=reader.livedoor.com|utmcct=/reader/|utmcmd=referral\r\n"             \
     "\r\n"
 
+void _FASTERHTTP_PrintTimevalDiff();
+
 static int test( int count )
 {
 	struct HttpEnv		*e = NULL ;
@@ -79,6 +81,8 @@ static int test( int count )
 			return -1;
 		}
 	}
+	
+	_FASTERHTTP_PrintTimevalDiff();
 	
 	DestroyHttpEnv( e );
 	

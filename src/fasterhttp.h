@@ -43,6 +43,14 @@ extern "C" {
 #endif
 #endif
 
+#if __GNUC__ >= 3
+#define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+#else
+#define likely(x) (x)
+#define unlikely(x) (x)
+#endif
+
 #ifndef STRCMP
 #define STRCMP(_a_,_C_,_b_) ( strcmp(_a_,_b_) _C_ 0 )
 #define STRNCMP(_a_,_C_,_b_,_n_) ( strncmp(_a_,_b_,_n_) _C_ 0 )
