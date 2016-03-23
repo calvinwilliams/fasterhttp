@@ -410,6 +410,7 @@ _WINDLL_FUNC void SetHttpReuseAddr( int sock , int onoff );
 _WINDLL_FUNC void SetHttpNonblock( int sock );
 _WINDLL_FUNC void SetHttpNodelay( int sock , int onoff );
 _WINDLL_FUNC void SetHttpNoLinger( int sock , int val );
+_WINDLL_FUNC void SetHttpCloseExec( int sock );
 
 _WINDLL_FUNC char *TokenHttpHeaderValue( char *str , char **pp_token , int *p_token_len );
 

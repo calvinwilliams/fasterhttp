@@ -170,6 +170,15 @@ void SetHttpNoLinger( int sock , int val )
 	return;
 }
 
+void SetHttpCloseExec( int sock )
+{
+	int	val ;
+	val = fcntl( sock , F_GETFD ) ;
+	val |= FD_CLOEXEC ;
+	fcntl( sock , F_SETFD , val );
+	return;
+}
+
 struct HttpBuffer *GetHttpRequestBuffer( struct HttpEnv *e )
 {
 	return &(e->request_buffer);
