@@ -653,6 +653,9 @@ void ResetHttpEnv( struct HttpEnv *e )
 	struct HttpHeaders	*p_headers = &(e->headers) ;
 	struct HttpBuffer	*b = NULL ;
 	
+	if( e == NULL )
+		return;
+	
 	/* struct HttpEnv */
 	
 	ResetHttpTimeout( e );
