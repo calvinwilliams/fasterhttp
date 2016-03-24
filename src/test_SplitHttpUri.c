@@ -2,20 +2,12 @@
 
 void test_SplitHttpUri( char *uri )
 {
-	char		*pathname_base = NULL ;
-	int		pathname_len = 0 ;
-	char		*filename_base = NULL ;
-	int		filename_len = 0 ;
-	char		*main_filename_base = NULL ;
-	int		main_filename_len = 0 ;
-	char		*ext_filename_base = NULL ;
-	int		ext_filename_len = 0 ;
-	char		*param_base = NULL ;
-	int		param_len = 0 ;
+	struct HttpUri	httpuri ;
 	
 	int		nret = 0 ;
 	
-	nret = SplitHttpUri( "." , uri , strlen(uri) , & pathname_base , & pathname_len , & filename_base , & filename_len , & main_filename_base , & main_filename_len , & ext_filename_base , & ext_filename_len , & param_base , & param_len ) ;
+	memset( & httpuri , 0x00 , sizeof(struct HttpUri) );
+	nret = SplitHttpUri( "." , uri , strlen(uri) , & httpuri ) ;
 	if( nret )
 	{
 		printf( "SplitHttpUri[%s] failed[%d]\n" , uri , nret );
@@ -24,11 +16,11 @@ void test_SplitHttpUri( char *uri )
 	{
 		printf( "------------------------------\n" );
 		printf( "          uri[%s]\n" , uri );
-		printf( "     pathname[%.*s]\n" , pathname_len , pathname_base );
-		printf( "     filename[%.*s]\n" , filename_len , filename_base );
-		printf( "main_filename[%.*s]\n" , main_filename_len , main_filename_base );
-		printf( " ext_filename[%.*s]\n" , ext_filename_len , ext_filename_base );
-		printf( "        param[%.*s]\n" , param_len , param_base );
+		printf( "     pathname[%.*s]\n" , httpuri.dirname_len , httpuri.dirname_base );
+		printf( "     filename[%.*s]\n" , httpuri.filename_len , httpuri.filename_base );
+		printf( "main_filename[%.*s]\n" , httpuri.main_filename_len , httpuri.main_filename_base );
+		printf( " ext_filename[%.*s]\n" , httpuri.ext_filename_len , httpuri.ext_filename_base );
+		printf( "        param[%.*s]\n" , httpuri.param_len , httpuri.param_base );
 	}
 	
 	return;
