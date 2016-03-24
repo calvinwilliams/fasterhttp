@@ -42,6 +42,7 @@ int main()
 	test_SplitHttpUri( "/vc5/vc6.dsw" );
 	test_SplitHttpUri( "/vc5/vc6.dsw?id=123" );
 	
+	test_SplitHttpUri( "/" );
 	test_SplitHttpUri( "?id=123" );
 	test_SplitHttpUri( "/vc6/?id=123" );
 	
