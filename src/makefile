@@ -29,7 +29,7 @@ LFLAGS		=	$(_LFLAGS) \
 			-lssl \
 
 ###### 额外宏定义区
-CLEAN_ADDITION	=
+CLEAN_ADDITION	=	test_SplitHttpUri.o
 
 ###### 加载mktpl模板库
 #@ make_all
