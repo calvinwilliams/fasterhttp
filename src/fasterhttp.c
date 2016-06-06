@@ -3,6 +3,8 @@
  * Licensed under the LGPL v2.1, see the file LICENSE in base directory.
  */
 
+#include "fasterhttp.h"
+
 struct HttpBuffer
 {
 	long		buf_size ;
@@ -44,8 +46,8 @@ struct HttpEnv *CreateHttpEnv()
 	e = (struct HttpEnv *)malloc( sizeof(struct HttpEnv) ) ;
 	if( e == NULL )
 	{
-		CleanHttpEnv( e );
-		return FASTERHTTP_ERROR_ALLOC;
+		DestroyHttpEnv( e );
+		return NULL;
 	}
 	memset( e , 0x00 , sizeof(struct HttpEnv) );
 	
@@ -55,7 +57,7 @@ struct HttpEnv *CreateHttpEnv()
 	e->request_buffer.base = (char*)malloc( e->request_buffer.buf_size ) ;
 	if( e->request_buffer.base == NULL )
 	{
-		CleanHttpEnv( e );
+		DestroyHttpEnv( e );
 		return NULL;
 	}
 	memset( e->request_buffer.base , 0x00 , sizeof(e->request_buffer.buf_size) );
@@ -66,7 +68,7 @@ struct HttpEnv *CreateHttpEnv()
 	e->response_buffer.base = (char*)malloc( e->response_buffer.buf_size ) ;
 	if( e->response_buffer.base == NULL )
 	{
-		CleanHttpEnv( e );
+		DestroyHttpEnv( e );
 		return NULL;
 	}
 	memset( e->response_buffer.base , 0x00 , sizeof(e->response_buffer.buf_size) );
@@ -77,7 +79,7 @@ struct HttpEnv *CreateHttpEnv()
 	e->header.item_array = (struct HttpHeaderItem *)malloc( sizeof(struct HttpHeaderItem) * e->header.item_array_size ) ;
 	if( e->header.item_array == NULL )
 	{
-		CleanHttpEnv( e );
+		DestroyHttpEnv( e );
 		return NULL;
 	}
 	memset( e->header.item_array , 0x00 , sizeof(struct HttpHeaderItem) * e->header.item_array_size );
@@ -113,12 +115,12 @@ void SetHttpTimeout( struct HttpEnv *e , long timeout )
 
 struct HttpBuffer *GetHttpRequestBuffer( struct HttpEnv *e )
 {
-	return e->request_buffer;
+	return &(e->request_buffer);
 }
 
 struct HttpBuffer *GetHttpResponseBuffer( struct HttpEnv *e )
 {
-	return e->response_buffer;
+	return &(e->response_buffer);
 }
 
 char *GetHttpBufferBase( struct HttpBuffer *b )
@@ -145,7 +147,7 @@ void CleanHttpBuffer( struct HttpBuffer *b )
 	char	*new_base = NULL ; \
 
 #define REALLOC_BUFFER(_b_) \
-	if( (_b_)->buf_size ) <= 100*1024*1024 ) \
+	if( (_b_)->buf_size <= 100*1024*1024 ) \
 		new_buf_size = (_b_)->buf_size * 2 ; \
 	else \
 		new_buf_size = 100*1024*1024 ; \
@@ -187,12 +189,42 @@ int MemcatHttpBuffer( struct HttpBuffer *b , char *base , long len )
 	
 	while( b->len + len > b->buf_size-1 )
 	{
-		REALLOC_BUFFER( b , len );
+		REALLOC_BUFFER( b );
 	}
 	
 	memcpy( b->ptr , base , len );
 	b->len += len ;
 	
+	return 0;
+}
+
+int SendHttpRequest( int sock , SSL *ssl , struct HttpEnv *e )
+{
+	return 0;
+}
+
+int ReceiveHttpResponse( int sock , SSL *ssl , struct HttpEnv *e )
+{
+	return 0;
+}
+
+int ParseHttpResponse( struct HttpEnv *e )
+{
+	return 0;
+}
+
+int ReceiveHttpRequest( int sock , SSL *ssl , struct HttpEnv *e )
+{
+	return 0;
+}
+
+int ParseHttpRequest( struct HttpEnv *e )
+{
+	return 0;
+}
+
+int SendHttpResponse( int sock , SSL *ssl , struct HttpEnv *e )
+{
 	return 0;
 }
 
