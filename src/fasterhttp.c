@@ -758,8 +758,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 	return nret;
 }
 
-<<<<<<< HEAD
-int RequestHttp( int sock , SSL *ssl , struct HttpEnv *e )
+int RequestHttp( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 {
 	int		nret = 0 ;
 	
@@ -774,7 +773,7 @@ int RequestHttp( int sock , SSL *ssl , struct HttpEnv *e )
 	return 0;
 }
 
-int ResponseHttp( int sock , SSL *ssl , struct HttpEnv *e , funcProcessHttpRequest *pfuncProcessHttpRequest , void *p )
+int ResponseHttp( SOCKET sock , SSL *ssl , struct HttpEnv *e , funcProcessHttpRequest *pfuncProcessHttpRequest , void *p )
 {
 	int		nret = 0 ;
 	
@@ -793,10 +792,7 @@ int ResponseHttp( int sock , SSL *ssl , struct HttpEnv *e , funcProcessHttpReque
 	return 0;
 }
 
-int SendHttpRequest( int sock , SSL *ssl , struct HttpEnv *e )
-=======
 int SendHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e )
->>>>>>> e340bcf597daa37a32a63f03dd762cebd1de317f
 {
 	int		nret = 0 ;
 	
