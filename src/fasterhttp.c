@@ -133,9 +133,9 @@ static int PushHttpHeader( struct HttpHeaders *p_headers , struct HttpHeader *p_
 
 static struct HttpHeader *QueryHttpHeader( struct HttpHeaders *p_headers , char *key )
 {
+	long			key_len ;
 	unsigned long		val ;
 	int			i ;
-	long			key_len ;
 	struct HttpHeader	*p = NULL ;
 	
 	key_len = strlen(key) ;
@@ -153,6 +153,25 @@ static struct HttpHeader *QueryHttpHeader( struct HttpHeaders *p_headers , char 
 	}
 	
 	return NULL;
+}
+
+void TravelHttpHeaders( struct HttpEnv *e )
+{
+	int			i ;
+	struct HttpHeader	*p = NULL ;
+	
+	if( e->headers.header_array_count == 0 )
+		return;
+	
+	for( i = 0 , p = e->headers.header_array ; i < e->headers.header_array_size ; i++ , p++ )
+	{
+		if( p->key_ptr )
+		{
+			printf( "TravelHttpHeaders - [%.*s][%.*s]\n" , p->key_len , p->key_ptr , p->value_len , p->value_ptr );
+		}
+	}
+	
+	return;
 }
 
 static void CleanHttpHeader( struct HttpHeaders *p_headers )
@@ -328,6 +347,23 @@ int ReallocHttpBuffer( struct HttpBuffer *b , long new_buf_size )
 	return 0;
 }
 
+int StrcatHttpBuffer( struct HttpBuffer *b , char *str )
+{
+	long		len ;
+	
+	len = strlen(str) ;
+	while( b->fill_len + len > b->buf_size-1 )
+	{
+		ReallocHttpBuffer( b , -1 );
+	}
+	
+	memcpy( b->fill_ptr , str , len );
+	b->fill_ptr += len ;
+	b->fill_len += len ;
+	
+	return 0;
+}
+
 int StrcatfHttpBuffer( struct HttpBuffer *b , char *format , ... )
 {
 	va_list		valist ;
@@ -344,6 +380,29 @@ int StrcatfHttpBuffer( struct HttpBuffer *b , char *format , ... )
 		}
 		else
 		{
+			b->fill_ptr += len ;
+			b->fill_len += len ;
+			break;
+		}
+	}
+	
+	return 0;
+}
+
+int StrcatvHttpBuffer( struct HttpBuffer *b , char *format , va_list valist )
+{
+	long		len ;
+	
+	while(1)
+	{
+		len = VSNPRINTF( b->fill_ptr , b->buf_size-1 - b->fill_len , format , valist ) ;
+		if( len == -1 || len == b->buf_size-1 - b->fill_len )
+		{
+			ReallocHttpBuffer( b , -1 );
+		}
+		else
+		{
+			b->fill_ptr += len ;
 			b->fill_len += len ;
 			break;
 		}
@@ -360,9 +419,20 @@ int MemcatHttpBuffer( struct HttpBuffer *b , char *base , long len )
 	}
 	
 	memcpy( b->fill_ptr , base , len );
+	b->fill_ptr += len ;
 	b->fill_len += len ;
 	
 	return 0;
+}
+
+void TravelHttpBody( struct HttpEnv *e )
+{
+	if( e->headers.content_length > 0 && e->body )
+	{
+		printf( "TravelHttpBody - body - [%.*s]\n" , e->headers.content_length , e->body );
+	}
+	
+	return;
 }
 
 static void AjustTimeval( struct timeval *ptv , struct timeval *t1 , struct timeval *t2 )
@@ -491,17 +561,19 @@ static int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struc
 	return 0;
 }
 
-#define HEADERFIRSTLINE_TOKEN(_header_) \
+#define HEADERFIRSTLINE_TOKEN(_header_,_last_flag_) \
 	for( ; (*p) == ' ' ; p++ ) \
 		; \
-	if( (*p) == HTTP_NEWLINE_RETURN ) \
+	if( (*p) == HTTP_NEWLINE ) \
 		return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID; \
 	(_header_).value_ptr = p ; \
-	for( ; (*p) != ' ' && (*p) != HTTP_NEWLINE_RETURN ; p++ ) \
+	for( ; (*p) != ' ' && (*p) != HTTP_NEWLINE ; p++ ) \
 		; \
-	if( (*p) == HTTP_NEWLINE_RETURN ) \
+	if( (_last_flag_) == 0 && (*p) == HTTP_NEWLINE ) \
 		return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID; \
 	(_header_).value_len = p - (_header_).value_ptr ; \
+	if( (_header_).value_ptr[(_header_).value_len-1] == HTTP_RETURN ) \
+		(_header_).value_len--; \
 
 /*
 GET / HTTP/1.1
@@ -511,13 +583,13 @@ static int ParseHttpRequestHeaderFirstLine( struct HttpEnv *e , struct HttpBuffe
 {
 	char	*line_end = NULL ;
 	
-	line_end = strstr( b->process_ptr , HTTP_NEWLINE ) ;
+	line_end = strchr( b->process_ptr , HTTP_NEWLINE ) ;
 	if( line_end )
 	{
 		char	*p = b->process_ptr ;
 		
 		/* Parse METHOD */
-		HEADERFIRSTLINE_TOKEN( e->headers.METHOD )
+		HEADERFIRSTLINE_TOKEN( e->headers.METHOD , 0 )
 		if( e->headers.METHOD.value_len == sizeof(HTTP_METHOD_GET)-1 && MEMCMP( e->headers.METHOD.value_ptr , == , HTTP_METHOD_GET  , sizeof(HTTP_METHOD_GET)-1 ) )
 			;
 		else if( e->headers.METHOD.value_len == sizeof(HTTP_METHOD_POST)-1 && MEMCMP( e->headers.METHOD.value_ptr , == , HTTP_METHOD_POST  , sizeof(HTTP_METHOD_POST)-1 ) )
@@ -536,10 +608,10 @@ static int ParseHttpRequestHeaderFirstLine( struct HttpEnv *e , struct HttpBuffe
 			return FASTERHTTP_ERROR_VERSION_NOT_SUPPORTED;
 		
 		/* Parse URI */
-		HEADERFIRSTLINE_TOKEN( e->headers.URI )
+		HEADERFIRSTLINE_TOKEN( e->headers.URI , 0 )
 		
 		/* Parse VERSION */
-		HEADERFIRSTLINE_TOKEN( e->headers.VERSION )
+		HEADERFIRSTLINE_TOKEN( e->headers.VERSION , 1 )
 		if( e->headers.VERSION.value_len == sizeof(HTTP_VERSION_1_0)-1 && MEMCMP( e->headers.VERSION.value_ptr , == , HTTP_VERSION_1_0  , sizeof(HTTP_VERSION_1_0)-1 ) )
 			;
 		else if( e->headers.VERSION.value_len == sizeof(HTTP_VERSION_1_1)-1 && MEMCMP( e->headers.VERSION.value_ptr , == , HTTP_VERSION_1_1  , sizeof(HTTP_VERSION_1_1)-1 ) )
@@ -547,7 +619,7 @@ static int ParseHttpRequestHeaderFirstLine( struct HttpEnv *e , struct HttpBuffe
 		else
 			return FASTERHTTP_ERROR_VERSION_NOT_SUPPORTED;
 		
-		b->process_ptr = p + sizeof(HTTP_NEWLINE)-1 ;
+		b->process_ptr = p + 1 ;
 		
 		return 0;
 	}
@@ -562,14 +634,15 @@ HTTP/1.1 200 OK
 static int ParseHttpResponseHeaderFirstLine( struct HttpEnv *e , struct HttpBuffer *b )
 {
 	char	*line_end = NULL ;
+	char	*p = NULL ;
 	
-	line_end = strstr( b->process_ptr , HTTP_NEWLINE ) ;
+	line_end = strchr( b->process_ptr , HTTP_NEWLINE ) ;
 	if( line_end )
 	{
-		char	*p = b->process_ptr ;
+		p = b->process_ptr ;
 		
 		/* Parse VERSION */
-		HEADERFIRSTLINE_TOKEN( e->headers.VERSION )
+		HEADERFIRSTLINE_TOKEN( e->headers.VERSION , 0 )
 		if( e->headers.VERSION.value_len == sizeof(HTTP_VERSION_1_0)-1 && MEMCMP( e->headers.VERSION.value_ptr , == , HTTP_VERSION_1_0  , sizeof(HTTP_VERSION_1_0)-1 ) )
 			;
 		else if( e->headers.VERSION.value_len == sizeof(HTTP_VERSION_1_1)-1 && MEMCMP( e->headers.VERSION.value_ptr , == , HTTP_VERSION_1_1  , sizeof(HTTP_VERSION_1_1)-1 ) )
@@ -578,12 +651,12 @@ static int ParseHttpResponseHeaderFirstLine( struct HttpEnv *e , struct HttpBuff
 			return FASTERHTTP_ERROR_VERSION_NOT_SUPPORTED;
 		
 		/* Parse STATUS_CODE */
-		HEADERFIRSTLINE_TOKEN( e->headers.STATUS_CODE )
+		HEADERFIRSTLINE_TOKEN( e->headers.STATUS_CODE , 0 )
 		
 		/* Parse REASON_PHRASE */
-		HEADERFIRSTLINE_TOKEN( e->headers.REASON_PHRASE )
+		HEADERFIRSTLINE_TOKEN( e->headers.REASON_PHRASE , 1 )
 		
-		b->process_ptr = p + sizeof(HTTP_NEWLINE)-1 ;
+		b->process_ptr = p + 1 ;
 		
 		return 0;
 	}
@@ -594,26 +667,29 @@ static int ParseHttpResponseHeaderFirstLine( struct HttpEnv *e , struct HttpBuff
 #define HEADERKEY_TOKEN(_p_,_header_) \
 	for( ; (*p) == ' ' ; p++ ) \
 		; \
-	if( (*p) == HTTP_NEWLINE_RETURN ) \
+	if( (*p) == HTTP_NEWLINE ) \
 		return FASTERHTTP_ERROR_HTTP_HEADER_INVALID; \
 	(_header_).key_ptr = p ; \
-	for( ; (*p) != ' ' && (*p) != ':' && (*p) != HTTP_NEWLINE_RETURN ; p++ ) \
+	for( ; (*p) != ' ' && (*p) != ':' && (*p) != HTTP_NEWLINE ; p++ ) \
 		; \
-	if( (*p) == HTTP_NEWLINE_RETURN ) \
+	if( (*p) == HTTP_NEWLINE ) \
 		return FASTERHTTP_ERROR_HTTP_HEADER_INVALID; \
 	(_header_).key_len = p - (_header_).key_ptr ; \
-	if( (*p) == ':' ) \
-		p++; \
+	for( ; (*p) != ':' && (*p) != HTTP_NEWLINE ; p++ ) \
+		; \
+	if( (*p) == HTTP_NEWLINE ) \
+		return FASTERHTTP_ERROR_HTTP_HEADER_INVALID; \
+	p++; \
 
 #define HEADERVALUE_TOKEN(_p_,_header_) \
 	for( ; (*p) == ' ' ; p++ ) \
 		; \
-	if( (*p) == HTTP_NEWLINE_RETURN ) \
+	if( (*p) == HTTP_NEWLINE ) \
 		return FASTERHTTP_ERROR_HTTP_HEADER_INVALID; \
 	(_header_).value_ptr = p ; \
-	for( ; (*p) != ' ' && (*p) != HTTP_NEWLINE_RETURN ; p++ ) \
+	for( p = line_end-1 ; (*p) == ' ' || (*p) == HTTP_RETURN ; p-- ) \
 		; \
-	(_header_).value_len = p - (_header_).value_ptr ; \
+	(_header_).value_len = p+1 - (_header_).value_ptr ; \
 
 /*
 Host: www.baidu.com
@@ -647,15 +723,24 @@ __bsi=13514842734789003845_00_0_I_R_122_0303_C02F_N_I_I_0; expires=Tue, 07-Jun-1
 static int ParseHttpHeader( struct HttpEnv *e , struct HttpBuffer *b )
 {
 	char			*line_end = NULL ;
-	char			*p = b->process_ptr ;
+	char			*p = NULL ;
 	struct HttpHeader	header ;
 	int			nret = 0 ;
 	
-	line_end = strstr( b->process_ptr , HTTP_NEWLINE ) ;
+	line_end = strchr( b->process_ptr , HTTP_NEWLINE ) ;
 	while( line_end )
 	{
-		if( line_end == b->process_ptr )
+		if( *(b->process_ptr) == HTTP_RETURN && b->process_ptr+1 == line_end )
+		{
+			b->process_ptr+=2;
 			return 0;
+		}
+		if( line_end == b->process_ptr )
+		{
+			b->process_ptr++;
+			return 0;
+		}
+		p = b->process_ptr ;
 		
 		/* Parse header 'KEY' */
 		HEADERKEY_TOKEN( p , header )
@@ -668,10 +753,10 @@ static int ParseHttpHeader( struct HttpEnv *e , struct HttpBuffer *b )
 			return nret;
 		
 		if( header.key_len == sizeof(HTTP_HEADER_CONTENT_LENGTH)-1 && STRNICMP( header.key_ptr , == , HTTP_HEADER_CONTENT_LENGTH , sizeof(HTTP_HEADER_CONTENT_LENGTH)-1 ) )
-			e->headers.content_length = natol( header.key_ptr , header.key_len ) ;
+			e->headers.content_length = natol( header.value_ptr , header.value_len ) ;
 		
-		b->process_ptr = line_end + sizeof(HTTP_NEWLINE)-1 ;
-		line_end = strstr( b->process_ptr , HTTP_NEWLINE ) ;
+		b->process_ptr = line_end + 1 ;
+		line_end = strchr( b->process_ptr , HTTP_NEWLINE ) ;
 	}
 	
 	return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
@@ -679,7 +764,7 @@ static int ParseHttpHeader( struct HttpEnv *e , struct HttpBuffer *b )
 
 static int ParseHttpBody( struct HttpEnv *e , struct HttpBuffer *b )
 {
-	if( b->fill_ptr - e->body + 1 >= e->headers.content_length )
+	if( b->fill_ptr - e->body >= e->headers.content_length )
 		return 0;
 	else
 		return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
@@ -748,11 +833,13 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			
 			case FASTERHTTP_PARSE_STEP_DONE :
 				
-				break;
+				return 0;
 			
 			default :
 				return FASTERHTTP_ERROR_INTERNAL;
 		}
+		if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
+			break;
 	}
 	
 	return nret;
@@ -834,16 +921,11 @@ int ParseHttpResponse( struct HttpEnv *e )
 {
 	int		nret = 0 ;
 	
-	while(1)
-	{
-		nret = ParseHttpBuffer( e , &(e->request_buffer) ) ;
-		if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
-			;
-		else if( nret )
-			return nret;
-		else
-			break;
-	}
+	nret = ParseHttpBuffer( e , &(e->response_buffer) ) ;
+	if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
+		return FASTERHTTP_ERROR_HTTP_TRUNCATION;
+	else if( nret )
+		return nret;
 	
 	return 0;
 }
@@ -874,16 +956,11 @@ int ParseHttpRequest( struct HttpEnv *e )
 {
 	int		nret = 0 ;
 	
-	while(1)
-	{
-		nret = ParseHttpBuffer( e , &(e->response_buffer) ) ;
-		if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
-			;
-		else if( nret )
-			return nret;
-		else
-			break;
-	}
+	nret = ParseHttpBuffer( e , &(e->request_buffer) ) ;
+	if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
+		return FASTERHTTP_ERROR_HTTP_TRUNCATION;
+	else if( nret )
+		return nret;
 	
 	return 0;
 }
@@ -942,7 +1019,7 @@ int ReceiveHttpRequestNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	if( nret )
 		return nret;
 	
-	nret = ParseHttpBuffer( e , &(e->response_buffer) ) ;
+	nret = ParseHttpBuffer( e , &(e->request_buffer) ) ;
 	if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
 		return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 	else if( nret )
@@ -975,5 +1052,20 @@ char *GetHttpHeaderPtr( struct HttpEnv *e , char *key , long *p_value_len )
 	if( p_value_len )
 		(*p_value_len) = p_header->value_len ;
 	return p_header->value_ptr;
+}
+
+char *GetHttpBodyPtr( struct HttpEnv *e , long *p_body_len )
+{
+	if( p_body_len )
+		(*p_body_len) = e->headers.content_length ;
+	
+	if( e->headers.content_length > 0 )
+	{
+		return e->body;
+	}
+	else
+	{
+		return NULL;
+	}
 }
 
