@@ -202,7 +202,7 @@ struct HttpEnv *CreateHttpEnv()
 	e->response_buffer.fill_len = 0 ;
 	e->response_buffer.process_len = 0 ;
 	
-	e->headers.header_array_size = FASTERHTTP_HEADER_ITEM_ARRAYSIZE_DEFAULT ;
+	e->headers.header_array_size = FASTERHTTP_HEADER_ARRAYSIZE_DEFAULT ;
 	e->headers.header_array = (struct HttpHeader *)malloc( sizeof(struct HttpHeader) * e->headers.header_array_size ) ;
 	if( e->headers.header_array == NULL )
 	{
@@ -227,15 +227,15 @@ void ResetHttpEnv( struct HttpEnv *e )
 	
 	e->headers.content_length = 0 ;
 	
-	if( e->headers.header_array_size > FASTERHTTP_HEADER_ITEM_ARRAYSIZE_MAX )
+	if( e->headers.header_array_size > FASTERHTTP_HEADER_ARRAYSIZE_MAX )
 	{
 		struct HttpHeader	*p = NULL ;
-		p = (struct HttpHeader *)malloc( sizeof(struct HttpHeader) * FASTERHTTP_HEADER_ITEM_ARRAYSIZE_DEFAULT ) ;
+		p = (struct HttpHeader *)malloc( sizeof(struct HttpHeader) * FASTERHTTP_HEADER_ARRAYSIZE_DEFAULT ) ;
 		if( p )
 		{
 			memset( p , 0x00 , sizeof(struct HttpHeader) * e->headers.header_array_size );
 			e->headers.header_array = p ;
-			e->headers.header_array_size = FASTERHTTP_HEADER_ITEM_ARRAYSIZE_DEFAULT ;
+			e->headers.header_array_size = FASTERHTTP_HEADER_ARRAYSIZE_DEFAULT ;
 		}
 	}
 	
@@ -270,7 +270,7 @@ void DestroyHttpEnv( struct HttpEnv *e )
 
 void SetHttpTimeout( struct HttpEnv *e , long timeout )
 {
-	e->timeout.tv_sec = 60 ;
+	e->timeout.tv_sec = timeout ;
 	e->timeout.tv_usec = 0 ;
 	
 	return;
@@ -491,7 +491,7 @@ static int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struc
 	long		len ;
 	int		nret = 0 ;
 	
-	while( b->fill_len + FASTERHTTP_READBLOCK_SIZE_DEFAULT > b->buf_size )
+	while( b->fill_len >= b->buf_size-1 )
 	{
 		nret = ReallocHttpBuffer( b , -1 ) ;
 		if( nret )
@@ -518,9 +518,9 @@ static int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struc
 	}
 	
 	if( ssl == NULL )
-		len = (long)recv( sock , b->fill_ptr , FASTERHTTP_READBLOCK_SIZE_DEFAULT , 0 ) ;
+		len = (long)recv( sock , b->fill_ptr , b->buf_size-1 - b->fill_len , 0 ) ;
 	else
-		len = (long)SSL_read( ssl , b->fill_ptr , FASTERHTTP_READBLOCK_SIZE_DEFAULT ) ;
+		len = (long)SSL_read( ssl , b->fill_ptr , b->buf_size-1 - b->fill_len ) ;
 	if( len == -1 )
 		return FASTERHTTP_ERROR_TCP_RECEIVE;
 	else if( len == 0 )
@@ -600,6 +600,7 @@ static int ParseHttpRequestHeaderFirstLine( struct HttpEnv *e , struct HttpBuffe
 			return FASTERHTTP_ERROR_VERSION_NOT_SUPPORTED;
 		
 		b->process_ptr = p + 1 ;
+		b->process_len = b->process_ptr - b->base ;
 		
 		return 0;
 	}
@@ -637,6 +638,7 @@ static int ParseHttpResponseHeaderFirstLine( struct HttpEnv *e , struct HttpBuff
 		HEADERFIRSTLINE_TOKEN( e->headers.REASON_PHRASE , "REASON_PHRASE" , 1 )
 		
 		b->process_ptr = p + 1 ;
+		b->process_len = b->process_ptr - b->base ;
 		
 		return 0;
 	}
@@ -736,6 +738,8 @@ static int ParseHttpHeader( struct HttpEnv *e , struct HttpBuffer *b )
 			e->headers.content_length = natol( header.value_ptr , header.value_len ) ;
 		
 		b->process_ptr = line_end + 1 ;
+		b->process_len = b->process_ptr - b->base ;
+		
 		line_end = strchr( b->process_ptr , HTTP_NEWLINE ) ;
 	}
 	
