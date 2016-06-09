@@ -69,8 +69,13 @@ extern "C" {
 #endif
 #endif
 
-#if ( defined __unix ) || ( defined __linux__ )
+#if ( defined _WIN32 )
+#define SOCKLEN_T	int
+#define CLOSESOCKET	closesocket
+#elif ( defined __unix ) || ( defined __linux__ )
 #define SOCKET		int
+#define SOCKLEN_T	socklen_t
+#define CLOSESOCKET	close
 #endif
 
 #define FASTERHTTP_ERROR_ALLOC				-11
@@ -94,6 +99,8 @@ extern "C" {
 #define FASTERHTTP_ERROR_METHOD_INVALID			-405
 #define FASTERHTTP_ERROR_URI_TOOLONG			-414
 #define FASTERHTTP_ERROR_VERSION_NOT_SUPPORTED		-505
+
+#define FASTERHTTP_TIMEOUT_DEFAULT			60
 
 #define FASTERHTTP_REQUEST_BUFSIZE_DEFAULT		400*1024
 #define FASTERHTTP_RESPONSE_BUFSIZE_DEFAULT		400*1024
@@ -135,6 +142,7 @@ _WINDLL_FUNC void DestroyHttpEnv( struct HttpEnv *e );
 
 /* properties */
 _WINDLL_FUNC void SetHttpTimeout( struct HttpEnv *e , long timeout );
+_WINDLL_FUNC struct timeval *GetHttpElapse( struct HttpEnv *e );
 
 /* buffer operations */
 _WINDLL_FUNC struct HttpBuffer *GetHttpRequestBuffer( struct HttpEnv *e );
@@ -174,8 +182,26 @@ _WINDLL_FUNC int ReceiveHttpRequestNonblock( SOCKET sock , SSL *ssl , struct Htt
 _WINDLL_FUNC int SendHttpResponseNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e );
 
 /* http data */
-_WINDLL_FUNC char *GetHttpHeaderPtr( struct HttpEnv *e , char *key , long *p_value_len );
+_WINDLL_FUNC char *GetHttpHeaderPtr_METHOD( struct HttpEnv *e , long *p_value_len );
+_WINDLL_FUNC int GetHttpHeaderLen_METHOD( struct HttpEnv *e );
+_WINDLL_FUNC char *GetHttpHeaderPtr_URI( struct HttpEnv *e , long *p_value_len );
+_WINDLL_FUNC int GetHttpHeaderLen_URI( struct HttpEnv *e );
+_WINDLL_FUNC char *GetHttpHeaderPtr_VERSION( struct HttpEnv *e , long *p_value_len );
+_WINDLL_FUNC int GetHttpHeaderLen_VERSION( struct HttpEnv *e );
+_WINDLL_FUNC char *GetHttpHeaderPtr_STATUS_CODE( struct HttpEnv *e , long *p_value_len );
+_WINDLL_FUNC int GetHttpHeaderLen_STATUS_CODE( struct HttpEnv *e );
+_WINDLL_FUNC char *GetHttpHeaderPtr_REASON_PHRASE( struct HttpEnv *e , long *p_value_len );
+_WINDLL_FUNC int GetHttpHeaderLen_REASON_PHRASE( struct HttpEnv *e );
+_WINDLL_FUNC char *GetHttpHeaderPtr( struct HttpEnv *e , char *name , long *p_value_len );
+_WINDLL_FUNC int GetHttpHeaderLen( struct HttpEnv *e , char *name );
+_WINDLL_FUNC int GetHttpHeaderCount( struct HttpEnv *e );
+_WINDLL_FUNC struct HttpHeader *TravelHttpHeaderPtr( struct HttpEnv *e , struct HttpHeader *p_header );
+_WINDLL_FUNC char *GetHttpHeaderNamePtr( struct HttpHeader *p_header , long *p_key_len );
+_WINDLL_FUNC int GetHttpHeaderNameLen( struct HttpHeader *p_header );
+_WINDLL_FUNC char *GetHttpHeaderValuePtr( struct HttpHeader *p_header , long *p_value_len );
+_WINDLL_FUNC int GetHttpHeaderValueLen( struct HttpHeader *p_header );
 _WINDLL_FUNC char *GetHttpBodyPtr( struct HttpEnv *e , long *p_body_len );
+_WINDLL_FUNC int GetHttpBodyLen( struct HttpEnv *e );
 
 #endif
 
