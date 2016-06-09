@@ -32,8 +32,7 @@ static int test()
 	}
 	
 	b = GetHttpRequestBuffer( e ) ;
-	
-	nret = StrcatfHttpBuffer( b , "%s" , REQ ) ;
+	nret = StrcatHttpBuffer( b , REQ ) ;
 	if( nret )
 	{
 		printf( "StrcatfHttpBuffer failed[%d]\n" , nret );
@@ -72,10 +71,19 @@ static int test()
 	{
 		ResetHttpEnv( e );
 		
+		b = GetHttpRequestBuffer( e ) ;
+		nret = StrcatHttpBuffer( b , REQ ) ;
+		if( nret )
+		{
+			printf( "StrcatfHttpBuffer failed[%d]\n" , nret );
+			DestroyHttpEnv( e );
+			return -1;
+		}
+		
 		nret = ParseHttpRequest( e ) ;
 		if( nret )
 		{
-			printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+			printf( "ParseHttpRequest failed[%d]\n" , nret );
 			DestroyHttpEnv( e );
 			return -1;
 		}

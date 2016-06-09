@@ -5,6 +5,8 @@
 
 #include "fasterhttp.h"
 
+int _FASTERHTTP_VERSION_1_0_0 = 0 ;
+
 struct HttpBuffer
 {
 	int			buf_size ;
