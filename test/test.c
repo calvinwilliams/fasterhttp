@@ -19,11 +19,11 @@ static int test()
 					"Host: www.baidu.com\r\n"
 					"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:45.0) Gecko/20100101 Firefox/45.0\r\n"
 					"Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3\r\n"
-					"Accept-Encoding: gzip, deflate, br\r\n"
+					"Accept-Encoding: gzip, deflate, br  \r\n"
 					"Cookie: BAIDUID=0E27B789D33BF3C43C6022BD0182CF8D:SL=0:NR=10:FG=1; BIDUPSID=EE65333C3C1B7FB4807F6DC5DE576979; PSTM=1462883721; BD_UPN=13314152; ispeed_lsm=2; MCITY=-179%3A; BDUSS=t4TW1VRFNsMm91bGtTcUFHbVFqfnhiVFVYd2ZKZFc2c0dGaG12VmhZckZJbmxYQVFBQUFBJCQAAAAAAAAAAAEAAADIZsc0Y2FsdmlubGljaAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMWVUVfFlVFXSG; pgv_pvi=56303616; BD_HOME=1; H_PS_PSSID=19290_1436_18240_20076_17001_15790_12201_20254; sug=3; sugstore=0; ORIGIN=2; bdime=0; __bsi=13900513390515515511_00_0_I_R_33_0303_C02F_N_I_I_0\r\n"
 					"Connection: keep-alive\r\n"
-					"Cache-Control: max-age=0\r\n"
-					"Content-Length: 3\r\n"
+					"Cache-Control : max-age=0\r\n"
+					"Content-Length :3\r\n"
 					"\r\n"
 					"xyz" ) ;
 	if( nret )

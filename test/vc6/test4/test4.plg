@@ -3,110 +3,23 @@
 <pre>
 <h1>Build Log</h1>
 <h3>
---------------------Configuration: test - Win32 Debug--------------------
-</h3>
-<h3>Command Lines</h3>
-Creating temporary file "C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPAF.tmp" with contents
-[
-/nologo /MLd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"Debug/test.pch" /YX /Fo"Debug/" /Fd"Debug/" /FD /GZ /c 
-"D:\Work\gitfiles\oschina.net\fasterhttp\src\fasterhttp.c"
-"D:\Work\gitfiles\oschina.net\fasterhttp\test\test.c"
-]
-Creating command line "cl.exe @C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPAF.tmp" 
-Creating temporary file "C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPB0.tmp" with contents
-[
-kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ssleay32.lib ws2_32.lib fasterhttp.lib /nologo /subsystem:console /incremental:yes /pdb:"Debug/test.pdb" /debug /machine:I386 /out:"Debug/test.exe" /pdbtype:sept 
-.\Debug\fasterhttp.obj
-.\Debug\test.obj
-]
-Creating command line "link.exe @C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPB0.tmp"
-<h3>Output Window</h3>
-Compiling...
-fasterhttp.c
-test.c
-Linking...
-   Creating library Debug/test.lib and object Debug/test.exp
-
-
-
-<h3>Results</h3>
-test.exe - 0 error(s), 0 warning(s)
-<h3>
---------------------Configuration: test2 - Win32 Debug--------------------
-</h3>
-<h3>Command Lines</h3>
-Creating temporary file "C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPB4.tmp" with contents
-[
-/nologo /MLd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"Debug/test2.pch" /YX /Fo"Debug/" /Fd"Debug/" /FD /GZ /c 
-"D:\Work\gitfiles\oschina.net\fasterhttp\src\fasterhttp.c"
-"D:\Work\gitfiles\oschina.net\fasterhttp\test\test2.c"
-]
-Creating command line "cl.exe @C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPB4.tmp" 
-Creating temporary file "C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPB5.tmp" with contents
-[
-kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ssleay32.lib ws2_32.lib fasterhttp.lib /nologo /subsystem:console /incremental:yes /pdb:"Debug/test2.pdb" /debug /machine:I386 /out:"Debug/test2.exe" /pdbtype:sept 
-.\Debug\fasterhttp.obj
-.\Debug\test2.obj
-]
-Creating command line "link.exe @C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPB5.tmp"
-<h3>Output Window</h3>
-Compiling...
-fasterhttp.c
-test2.c
-Linking...
-   Creating library Debug/test2.lib and object Debug/test2.exp
-
-
-
-<h3>Results</h3>
-test2.exe - 0 error(s), 0 warning(s)
-<h3>
---------------------Configuration: test3 - Win32 Debug--------------------
-</h3>
-<h3>Command Lines</h3>
-Creating temporary file "C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPB9.tmp" with contents
-[
-/nologo /MLd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"Debug/test3.pch" /YX /Fo"Debug/" /Fd"Debug/" /FD /GZ /c 
-"D:\Work\gitfiles\oschina.net\fasterhttp\src\fasterhttp.c"
-"D:\Work\gitfiles\oschina.net\fasterhttp\test\test3.c"
-]
-Creating command line "cl.exe @C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPB9.tmp" 
-Creating temporary file "C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPBA.tmp" with contents
-[
-kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ssleay32.lib ws2_32.lib fasterhttp.lib /nologo /subsystem:console /incremental:yes /pdb:"Debug/test3.pdb" /debug /machine:I386 /out:"Debug/test3.exe" /pdbtype:sept 
-.\Debug\fasterhttp.obj
-.\Debug\test3.obj
-]
-Creating command line "link.exe @C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPBA.tmp"
-<h3>Output Window</h3>
-Compiling...
-fasterhttp.c
-test3.c
-Linking...
-   Creating library Debug/test3.lib and object Debug/test3.exp
-
-
-
-<h3>Results</h3>
-test3.exe - 0 error(s), 0 warning(s)
-<h3>
 --------------------Configuration: test4 - Win32 Debug--------------------
 </h3>
 <h3>Command Lines</h3>
-Creating temporary file "C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPBE.tmp" with contents
+Creating temporary file "C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSP145.tmp" with contents
 [
 /nologo /MLd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /FR"Debug/" /Fp"Debug/test4.pch" /YX /Fo"Debug/" /Fd"Debug/" /FD /GZ /c 
 "D:\Work\gitfiles\oschina.net\fasterhttp\src\fasterhttp.c"
 "D:\Work\gitfiles\oschina.net\fasterhttp\test\test4.c"
 ]
-Creating command line "cl.exe @C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPBE.tmp" 
-Creating temporary file "C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPBF.tmp" with contents
+Creating command line "cl.exe @C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSP145.tmp" 
+Creating temporary file "C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSP146.tmp" with contents
 [
 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ssleay32.lib ws2_32.lib fasterhttp.lib /nologo /subsystem:console /incremental:yes /pdb:"Debug/test4.pdb" /debug /machine:I386 /out:"Debug/test4.exe" /pdbtype:sept 
 .\Debug\fasterhttp.obj
 .\Debug\test4.obj
 ]
-Creating command line "link.exe @C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPBF.tmp"
+Creating command line "link.exe @C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSP146.tmp"
 <h3>Output Window</h3>
 Compiling...
 fasterhttp.c
@@ -121,35 +34,6 @@ Creating browse info file...
 
 <h3>Results</h3>
 test4.exe - 0 error(s), 0 warning(s)
-<h3>
---------------------Configuration: test5 - Win32 Debug--------------------
-</h3>
-<h3>Command Lines</h3>
-Creating temporary file "C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPC3.tmp" with contents
-[
-/nologo /MLd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /Fp"Debug/test5.pch" /YX /Fo"Debug/" /Fd"Debug/" /FD /GZ /c 
-"D:\Work\gitfiles\oschina.net\fasterhttp\src\fasterhttp.c"
-"D:\Work\gitfiles\oschina.net\fasterhttp\test\test5.c"
-]
-Creating command line "cl.exe @C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPC3.tmp" 
-Creating temporary file "C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPC4.tmp" with contents
-[
-kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib ssleay32.lib ws2_32.lib fasterhttp.lib /nologo /subsystem:console /incremental:yes /pdb:"Debug/test5.pdb" /debug /machine:I386 /out:"Debug/test5.exe" /pdbtype:sept 
-.\Debug\fasterhttp.obj
-.\Debug\test5.obj
-]
-Creating command line "link.exe @C:\DOCUME~1\Calvin\LOCALS~1\Temp\RSPC4.tmp"
-<h3>Output Window</h3>
-Compiling...
-fasterhttp.c
-test5.c
-Linking...
-   Creating library Debug/test5.lib and object Debug/test5.exp
-
-
-
-<h3>Results</h3>
-test5.exe - 0 error(s), 0 warning(s)
 </pre>
 </body>
 </html>
