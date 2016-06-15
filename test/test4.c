@@ -3,7 +3,7 @@
 funcProcessHttpRequest ProcessHttpRequest ;
 int ProcessHttpRequest( struct HttpEnv *e , void *p )
 {
-	SOCKET			sock = (SOCKET)p ;
+	SOCKET			sock = *((SOCKET*)p) ;
 	struct sockaddr_in	sockaddr ;
 	SOCKLEN_T		socklen ;
 	struct HttpHeader	*p_header = NULL ;
@@ -107,7 +107,7 @@ int test4()
 		
 		ResetHttpEnv( e );
 		
-		nret = ResponseHttp( accept_sock , NULL , e , & ProcessHttpRequest , (void*)accept_sock ) ;
+		nret = ResponseHttp( accept_sock , NULL , e , & ProcessHttpRequest , (void*)(&accept_sock) ) ;
 		if( nret )
 		{
 			printf( "ResponseHttp[%d]\n" , nret );

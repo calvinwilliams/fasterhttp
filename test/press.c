@@ -74,7 +74,7 @@ static int test( int count )
 		SetHttpBufferPtr( b , REQ , sizeof(REQ) ) ;
 		
 		nret = ParseHttpRequest( e ) ;
-		if( nret )
+		if( unlikely(nret) )
 		{
 			printf( "ParseHttpRequest failed[%d]\n" , nret );
 			DestroyHttpEnv( e );
