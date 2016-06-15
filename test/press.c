@@ -1,6 +1,6 @@
 #include "fasterhttp.h"
 
-#define DEBUG		0
+#define DEBUG		1
 
 #define REQ                                                                                                                        \
     "GET /wp-content/uploads/2010/03/hello-kitty-darth-vader-pink.jpg HTTP/1.1\r\n"                                                \

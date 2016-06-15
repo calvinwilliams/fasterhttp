@@ -218,25 +218,25 @@ _WINDLL_FUNC int ParseHttpResponse( struct HttpEnv *e );
 _WINDLL_FUNC int ParseHttpRequest( struct HttpEnv *e );
 
 /* http data */
-_WINDLL_FUNC char *GetHttpHeaderPtr_METHOD( struct HttpEnv *e , long *p_value_len );
+_WINDLL_FUNC char *GetHttpHeaderPtr_METHOD( struct HttpEnv *e , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderLen_METHOD( struct HttpEnv *e );
-_WINDLL_FUNC char *GetHttpHeaderPtr_URI( struct HttpEnv *e , long *p_value_len );
+_WINDLL_FUNC char *GetHttpHeaderPtr_URI( struct HttpEnv *e , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderLen_URI( struct HttpEnv *e );
-_WINDLL_FUNC char *GetHttpHeaderPtr_VERSION( struct HttpEnv *e , long *p_value_len );
+_WINDLL_FUNC char *GetHttpHeaderPtr_VERSION( struct HttpEnv *e , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderLen_VERSION( struct HttpEnv *e );
-_WINDLL_FUNC char *GetHttpHeaderPtr_STATUS_CODE( struct HttpEnv *e , long *p_value_len );
+_WINDLL_FUNC char *GetHttpHeaderPtr_STATUS_CODE( struct HttpEnv *e , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderLen_STATUS_CODE( struct HttpEnv *e );
-_WINDLL_FUNC char *GetHttpHeaderPtr_REASON_PHRASE( struct HttpEnv *e , long *p_value_len );
+_WINDLL_FUNC char *GetHttpHeaderPtr_REASON_PHRASE( struct HttpEnv *e , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderLen_REASON_PHRASE( struct HttpEnv *e );
-_WINDLL_FUNC char *GetHttpHeaderPtr( struct HttpEnv *e , char *name , long *p_value_len );
+_WINDLL_FUNC char *GetHttpHeaderPtr( struct HttpEnv *e , char *name , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderLen( struct HttpEnv *e , char *name );
 _WINDLL_FUNC int GetHttpHeaderCount( struct HttpEnv *e );
 _WINDLL_FUNC struct HttpHeader *TravelHttpHeaderPtr( struct HttpEnv *e , struct HttpHeader *p_header );
-_WINDLL_FUNC char *GetHttpHeaderNamePtr( struct HttpHeader *p_header , long *p_key_len );
+_WINDLL_FUNC char *GetHttpHeaderNamePtr( struct HttpHeader *p_header , int *p_key_len );
 _WINDLL_FUNC int GetHttpHeaderNameLen( struct HttpHeader *p_header );
-_WINDLL_FUNC char *GetHttpHeaderValuePtr( struct HttpHeader *p_header , long *p_value_len );
+_WINDLL_FUNC char *GetHttpHeaderValuePtr( struct HttpHeader *p_header , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderValueLen( struct HttpHeader *p_header );
-_WINDLL_FUNC char *GetHttpBodyPtr( struct HttpEnv *e , long *p_body_len );
+_WINDLL_FUNC char *GetHttpBodyPtr( struct HttpEnv *e , int *p_body_len );
 _WINDLL_FUNC int GetHttpBodyLen( struct HttpEnv *e );
 
 #endif

@@ -15,7 +15,7 @@ static int test()
 	
 	b = GetHttpRequestBuffer( e ) ;
 	
-	nret = StrcatfHttpBuffer( b , "POST / HTTP/1.1\r\n"
+	nret = StrcatHttpBuffer( b , "POST / HTTP/1.1\r\n"
 					"Host: www.baidu.com\r\n"
 					"User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:45.0) Gecko/20100101 Firefox/45.0\r\n"
 					"Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3\r\n"
