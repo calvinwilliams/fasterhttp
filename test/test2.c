@@ -56,7 +56,7 @@ static int test()
 	}
 	
 	nret = TestParseHttpRequest( e , "GET / HTTP/1.1\r\n\r\n" ) ;
-	if( ! ( nret == 0 ) )
+	if( nret )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );
@@ -76,7 +76,7 @@ static int test()
 					"Connection: keep-alive\r\n"
 					"Cache-Control: max-age=0\r\n"
 					"\r\n" ) ;
-	if( ! ( nret == 0 ) )
+	if( nret )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );
@@ -91,7 +91,7 @@ static int test()
 					"Content-Length: 3\r\n"
 					"\r\n"
 					"xyz" ) ;
-	if( ! ( nret == 0 ) )
+	if( nret )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );
@@ -103,7 +103,47 @@ static int test()
 	}
 	
 	nret = TestParseHttpRequest( e , "GET /index.html HTTP/1.1\n\n" ) ;
-	if( ! ( nret == 0 ) )
+	if( nret )
+	{
+		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
+		return -1;
+	}
+	else
+	{
+		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
+	}
+	
+	nret = TestParseHttpRequest( e , "POST / HTTP/1.1\r\n"
+					"Transfer-Encoding: chunked\r\n"
+					"\r\n"
+					"1\r\n"
+					"x\r\n"
+					"2\r\n"
+					"yz\r\n"
+					"0\r\n" );
+	if( nret )
+	{
+		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
+		return -1;
+	}
+	else
+	{
+		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
+	}
+	
+	nret = TestParseHttpRequest( e , "POST / HTTP/1.1\r\n"
+					"Transfer-Encoding: chunked\r\n"
+					"Trailer: Content-MD5\r\n"
+					"\r\n"
+					"1\r\n"
+					"a\r\n"
+					"2\r\n"
+					"bc\r\n"
+					"0\r\n"
+					"Content-MD5: 1234567890ABCDEF" ) ;
+	if( nret )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );

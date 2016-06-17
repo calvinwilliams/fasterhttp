@@ -56,7 +56,7 @@ static int test()
 	}
 	
 	nret = TestParseHttpRequest( e , "GE / HTTP/1.1\r\n\r\n" ) ;
-	if( ! ( nret != 0 ) )
+	if( ! nret )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );
@@ -68,7 +68,7 @@ static int test()
 	}
 	
 	nret = TestParseHttpRequest( e , "GET HTTP/1.1\r\n\r\n" ) ;
-	if( ! ( nret != 0 ) )
+	if( ! nret )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );
@@ -80,7 +80,7 @@ static int test()
 	}
 	
 	nret = TestParseHttpRequest( e , "GET / HTTP/1.2\r\n\r\n" ) ;
-	if( ! ( nret != 0 ) )
+	if( ! nret )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );
@@ -95,7 +95,7 @@ static int test()
 					"Content-Length: 4\r\n"
 					"\r\n"
 					"xyz" ) ;
-	if( ! ( nret == FASTERHTTP_ERROR_HTTP_TRUNCATION ) )
+	if( ! nret )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );

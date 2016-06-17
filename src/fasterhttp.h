@@ -44,11 +44,11 @@ extern "C" {
 #endif
 
 #if __GNUC__ >= 3
-#define likely(x) __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(!!(x), 0)
+#define LIKELY(x) __builtin_expect(!!(x), 1)
+#define UNLIKELY(x) __builtin_expect(!!(x), 0)
 #else
-#define likely(x) (x)
-#define unlikely(x) (x)
+#define LIKELY(x) (x)
+#define UNLIKELY(x) (x)
 #endif
 
 #ifndef STRCMP
@@ -141,6 +141,8 @@ extern "C" {
 #define FASTERHTTP_PARSESTEP_HEADER_VALUE0			220
 #define FASTERHTTP_PARSESTEP_HEADER_VALUE			221
 #define FASTERHTTP_PARSESTEP_BODY				300
+#define FASTERHTTP_PARSESTEP_CHUNKED_SIZE			311
+#define FASTERHTTP_PARSESTEP_CHUNKED_DATA			312
 #define FASTERHTTP_PARSESTEP_DONE				400
 
 #define HTTP_RETURN					'\r'
@@ -164,6 +166,8 @@ extern "C" {
 #define HTTP_VERSION_1_1				"HTTP/1.1"
 
 #define HTTP_HEADER_CONTENT_LENGTH			"Content-Length"
+#define HTTP_HEADER_TRANSFERENCODING			"Transfer-Encoding"
+#define HTTP_HEADER_TRANSFERENCODING__CHUNKED		"chunked"
 
 struct HttpBuffer ;
 struct HttpEnv ;
@@ -224,10 +228,16 @@ _WINDLL_FUNC char *GetHttpHeaderPtr_URI( struct HttpEnv *e , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderLen_URI( struct HttpEnv *e );
 _WINDLL_FUNC char *GetHttpHeaderPtr_VERSION( struct HttpEnv *e , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderLen_VERSION( struct HttpEnv *e );
-_WINDLL_FUNC char *GetHttpHeaderPtr_STATUS_CODE( struct HttpEnv *e , int *p_value_len );
-_WINDLL_FUNC int GetHttpHeaderLen_STATUS_CODE( struct HttpEnv *e );
-_WINDLL_FUNC char *GetHttpHeaderPtr_REASON_PHRASE( struct HttpEnv *e , int *p_value_len );
-_WINDLL_FUNC int GetHttpHeaderLen_REASON_PHRASE( struct HttpEnv *e );
+_WINDLL_FUNC char *GetHttpHeaderPtr_STATUSCODE( struct HttpEnv *e , int *p_value_len );
+_WINDLL_FUNC int GetHttpHeaderLen_STATUSCODE( struct HttpEnv *e );
+_WINDLL_FUNC char *GetHttpHeaderPtr_REASONPHRASE( struct HttpEnv *e , int *p_value_len );
+_WINDLL_FUNC int GetHttpHeaderLen_REASONPHRASE( struct HttpEnv *e );
+_WINDLL_FUNC char *GetHttpHeaderPtr_TRANSFERENCODING( struct HttpEnv *e , int *p_value_len );
+_WINDLL_FUNC int GetHttpHeaderLen_TRANSFERENCODING( struct HttpEnv *e );
+_WINDLL_FUNC char *GetHttpHeaderPtr_TRAILER( struct HttpEnv *e , int *p_value_len );
+_WINDLL_FUNC int GetHttpHeaderLen_TRAILER( struct HttpEnv *e );
+
+_WINDLL_FUNC struct HttpHeader *QueryHttpHeader( struct HttpEnv *e , char *name );
 _WINDLL_FUNC char *GetHttpHeaderPtr( struct HttpEnv *e , char *name , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderLen( struct HttpEnv *e , char *name );
 _WINDLL_FUNC int GetHttpHeaderCount( struct HttpEnv *e );

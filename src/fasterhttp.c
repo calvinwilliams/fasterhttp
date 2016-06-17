@@ -36,11 +36,13 @@ struct HttpHeaders
 	struct HttpHeader	CONTENT_LENGTH ;
 	int			content_length ;
 	
+	struct HttpHeader	TRANSFERENCODING ;
+	struct HttpHeader	TRAILER ;
+	int			transfer_encoding__chunked ;
+	
 	struct HttpHeader	*header_array ;
 	int			header_array_size ;
 	int			header_array_count ;
-	
-	struct HttpHeader	header ;
 } ;
 
 struct HttpEnv
@@ -52,45 +54,13 @@ struct HttpEnv
 	
 	int			parse_step ;
 	struct HttpHeaders	headers ;
+	
 	char			*body ;
+	
+	char			*chunked_body ;
+	int			chunked_length ;
+	int			chunked_length_length ;
 } ;
-
-static unsigned long HashCalc( unsigned char *name , int len )
-{
-	unsigned long	val = 5381 ;
-	int		i ;
-	
-	for( i = 0 ; i < len && (*name) ; i++ , name++ )
-	{
-		val = ( ( val << 5 ) + val ) + (*name) ;
-	}
-	
-	return val;
-}
-
-static struct HttpHeader *QueryHttpHeader( struct HttpHeaders *p_headers , char *name )
-{
-	long			name_len ;
-	unsigned long		val ;
-	int			i ;
-	struct HttpHeader	*p = NULL ;
-	
-	name_len = strlen(name) ;
-	
-	val = HashCalc( (unsigned char *)name , strlen(name) ) % p_headers->header_array_size ;
-	for( i = 0 , p = p_headers->header_array+val ; i < p_headers->header_array_size ; i++ , p++ )
-	{
-		if( p > p_headers->header_array + p_headers->header_array_size )
-			p = p_headers->header_array;
-		
-		if( p->name_ptr && p->name_len == name_len && MEMCMP( p->name_ptr , == , name , name_len ) )
-		{
-			return p;
-		}
-	}
-	
-	return NULL;
-}
 
 static void CleanHttpHeader( struct HttpHeaders *p_headers )
 {
@@ -154,6 +124,8 @@ struct HttpEnv *CreateHttpEnv()
 
 void ResetHttpEnv( struct HttpEnv *e )
 {
+	/* struct HttpEnv */
+	
 	SetHttpTimeout( e , FASTERHTTP_TIMEOUT_DEFAULT );
 	
 	if( e->request_buffer.ref_flag == 0 && e->request_buffer.buf_size > FASTERHTTP_REQUEST_BUFSIZE_MAX )
@@ -165,7 +137,17 @@ void ResetHttpEnv( struct HttpEnv *e )
 	
 	e->parse_step = FASTERHTTP_PARSESTEP_BEGIN ;
 	
+	e->body = NULL ;
+	
+	e->chunked_body = NULL ;
+	e->chunked_length = 0 ;
+	e->chunked_length_length = 0 ;
+	
+	/* struct HttpHeaders */
+	
 	e->headers.content_length = 0 ;
+	
+	e->headers.transfer_encoding__chunked = 0 ;
 	
 	if( e->headers.header_array_size > FASTERHTTP_HEADER_ARRAYSIZE_MAX )
 	{
@@ -180,8 +162,6 @@ void ResetHttpEnv( struct HttpEnv *e )
 		}
 	}
 	CleanHttpHeader( &(e->headers) );
-	
-	e->body = NULL ;
 	
 	return;
 }
@@ -547,7 +527,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 	SetTimeval( 0 );
 #endif
 	
-	if( unlikely( e->parse_step == FASTERHTTP_PARSESTEP_BEGIN ) )
+	if( UNLIKELY( e->parse_step == FASTERHTTP_PARSESTEP_BEGIN ) )
 	{
 		if( b == &(e->request_buffer) )
 		{
@@ -575,14 +555,14 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			SetTimeval( 1 );
 #endif
 			
-			for( ; unlikely( (*p) == ' ' && p < fill_ptr ) ; p++ )
+			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
 				;
-			if( unlikely( p >= fill_ptr ) )
+			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( unlikely( (*p) == HTTP_NEWLINE ) )
+			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
 			e->headers.METHOD.name_ptr = HTTP_HEADER_METHOD ;
 			e->headers.METHOD.name_len = sizeof(HTTP_HEADER_METHOD)-1 ;
@@ -601,14 +581,14 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			SetTimeval( 2 );
 #endif
 			
-			for( ; likely( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
+			for( ; LIKELY( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
 				;
-			if( unlikely( p >= fill_ptr ) )
+			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( unlikely( (*p) == HTTP_NEWLINE ) )
+			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
 			e->headers.METHOD.value_len = p - e->headers.METHOD.value_ptr ;
 			p++;
@@ -676,14 +656,14 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			SetTimeval( 3 );
 #endif
 			
-			for( ; unlikely( (*p) == ' ' && p < fill_ptr ) ; p++ )
+			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
 				;
-			if( unlikely( p >= fill_ptr ) )
+			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( unlikely( (*p) == HTTP_NEWLINE ) )
+			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
 			e->headers.URI.name_ptr = HTTP_HEADER_URI ;
 			e->headers.URI.name_len = sizeof(HTTP_HEADER_URI)-1 ;
@@ -702,14 +682,14 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			SetTimeval( 4 );
 #endif
 			
-			for( ; likely( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
+			for( ; LIKELY( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
 				;
-			if( unlikely( p >= fill_ptr ) )
+			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( unlikely( (*p) == HTTP_NEWLINE ) )
+			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
 			e->headers.URI.value_len = p - e->headers.URI.value_ptr ;
 			p++;
@@ -726,14 +706,14 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			SetTimeval( 5 );
 #endif
 			
-			for( ; unlikely( (*p) == ' ' && p < fill_ptr ) ; p++ )
+			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
 				;
-			if( unlikely( p >= fill_ptr ) )
+			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( unlikely( (*p) == HTTP_NEWLINE ) )
+			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
 			e->headers.VERSION.name_ptr = HTTP_HEADER_VERSION ;
 			e->headers.VERSION.name_len = sizeof(HTTP_HEADER_VERSION)-1 ;
@@ -752,30 +732,30 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			SetTimeval( 6 );
 #endif
 			
-			for( ; likely( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
+			for( ; LIKELY( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
 				;
-			if( unlikely( p >= fill_ptr ) )
+			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
 			e->headers.VERSION.value_len = p - e->headers.VERSION.value_ptr ;
-			for( ; likely( (*p) != HTTP_NEWLINE ) ; p++ )
+			for( ; LIKELY( (*p) != HTTP_NEWLINE ) ; p++ )
 				;
-			if( likely( *(p-1) == HTTP_RETURN ) )
+			if( LIKELY( *(p-1) == HTTP_RETURN ) )
 				e->headers.VERSION.value_len--;
 			p++;
 			
 			p2 = e->headers.VERSION.value_ptr ;
-			if( likely( e->headers.VERSION.value_len == sizeof(HTTP_VERSION_1_0)-1 ) )
+			if( LIKELY( e->headers.VERSION.value_len == sizeof(HTTP_VERSION_1_0)-1 ) )
 			{
-				if( likely( *(p2) == HTTP_VERSION_1_0[0] && *(p2+1) == HTTP_VERSION_1_0[1] && *(p2+2) == HTTP_VERSION_1_0[2]
+				if( LIKELY( *(p2) == HTTP_VERSION_1_0[0] && *(p2+1) == HTTP_VERSION_1_0[1] && *(p2+2) == HTTP_VERSION_1_0[2]
 					&& *(p2+3) == HTTP_VERSION_1_0[3] && *(p2+4) == HTTP_VERSION_1_0[4] && *(p2+5) == HTTP_VERSION_1_0[5]
 					&& *(p2+6) == HTTP_VERSION_1_0[6] ) )
 				{
-					if( unlikely( *(p2+7) == HTTP_VERSION_1_0[7] ) )
+					if( UNLIKELY( *(p2+7) == HTTP_VERSION_1_0[7] ) )
 						;
-					else if( likely( *(p2+7) == HTTP_VERSION_1_1[7] ) )
+					else if( LIKELY( *(p2+7) == HTTP_VERSION_1_1[7] ) )
 						;
 					else
 						return FASTERHTTP_ERROR_VERSION_NOT_SUPPORTED;
@@ -799,14 +779,14 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			SetTimeval( 7 );
 #endif
 			
-			for( ; unlikely( (*p) == ' ' && p < fill_ptr ) ; p++ )
+			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
 				;
-			if( unlikely( p >= fill_ptr ) )
+			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( unlikely( (*p) == HTTP_NEWLINE ) )
+			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
 			e->headers.VERSION.name_ptr = HTTP_HEADER_VERSION ;
 			e->headers.VERSION.name_len = sizeof(HTTP_HEADER_VERSION)-1 ;
@@ -825,28 +805,28 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			SetTimeval( 8 );
 #endif
 			
-			for( ; likely( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
+			for( ; LIKELY( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
 				;
-			if( unlikely( p >= fill_ptr ) )
+			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( unlikely( (*p) == HTTP_NEWLINE ) )
+			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
 			e->headers.VERSION.value_len = p - e->headers.VERSION.value_ptr ;
 			p++;
 			
 			p2 = e->headers.VERSION.value_ptr ;
-			if( likely( e->headers.VERSION.value_len == sizeof(HTTP_VERSION_1_0)-1 ) )
+			if( LIKELY( e->headers.VERSION.value_len == sizeof(HTTP_VERSION_1_0)-1 ) )
 			{
-				if( likely( *(p2) == HTTP_VERSION_1_0[0] && *(p2+1) == HTTP_VERSION_1_0[1] && *(p2+2) == HTTP_VERSION_1_0[2]
+				if( LIKELY( *(p2) == HTTP_VERSION_1_0[0] && *(p2+1) == HTTP_VERSION_1_0[1] && *(p2+2) == HTTP_VERSION_1_0[2]
 					&& *(p2+3) == HTTP_VERSION_1_0[3] && *(p2+4) == HTTP_VERSION_1_0[4] && *(p2+5) == HTTP_VERSION_1_0[5]
 					&& *(p2+6) == HTTP_VERSION_1_0[6] ) )
 				{
-					if( unlikely( *(p2+7) == HTTP_VERSION_1_0[7] ) )
+					if( UNLIKELY( *(p2+7) == HTTP_VERSION_1_0[7] ) )
 						;
-					else if( likely( *(p2+7) == HTTP_VERSION_1_1[7] ) )
+					else if( LIKELY( *(p2+7) == HTTP_VERSION_1_1[7] ) )
 						;
 					else
 						return FASTERHTTP_ERROR_VERSION_NOT_SUPPORTED;
@@ -869,13 +849,13 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			SetTimeval( 9 );
 #endif
 			
-			for( ; unlikely( (*p) == ' ' && p < fill_ptr ) ; p++ )
+			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
 				;
-			if( unlikely( p >= fill_ptr ) )
+			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( unlikely( (*p) == HTTP_NEWLINE ) )
+			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
 			e->headers.STATUSCODE.name_ptr = HTTP_HEADER_STATUSCODE ;
 			e->headers.STATUSCODE.name_len = sizeof(HTTP_HEADER_STATUSCODE)-1 ;
@@ -894,14 +874,14 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			SetTimeval( 10 );
 #endif
 			
-			for( ; likely( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
+			for( ; LIKELY( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
 				;
-			if( unlikely( p >= fill_ptr ) )
+			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( unlikely( (*p) == HTTP_NEWLINE ) )
+			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
 			e->headers.STATUSCODE.value_len = p - e->headers.STATUSCODE.value_ptr ;
 			p++;
@@ -918,14 +898,14 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			SetTimeval( 11 );
 #endif
 			
-			for( ; unlikely( (*p) == ' ' && p < fill_ptr ) ; p++ )
+			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
 				;
-			if( unlikely( p >= fill_ptr ) )
+			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( unlikely( (*p) == HTTP_NEWLINE ) )
+			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
 			e->headers.REASONPHRASE.name_ptr = HTTP_HEADER_REASONPHRASE ;
 			e->headers.REASONPHRASE.name_len = sizeof(HTTP_HEADER_REASONPHRASE)-1 ;
@@ -944,9 +924,9 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			SetTimeval( 12 );
 #endif
 			
-			for( ; likely( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
+			for( ; LIKELY( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
 				;
-			if( unlikely( p >= fill_ptr ) )
+			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
@@ -954,7 +934,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			e->headers.REASONPHRASE.value_len = p - e->headers.REASONPHRASE.value_ptr ;
 			for( ; (*p) != HTTP_NEWLINE ; p++ )
 				;
-			if( likely( *(p-1) == HTTP_RETURN ) )
+			if( LIKELY( *(p-1) == HTTP_RETURN ) )
 				e->headers.REASONPHRASE.value_len--;
 			p++;
 			
@@ -974,37 +954,44 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 #endif
 			
 			/*
-			for( ; unlikely( (*p) == ' ' && p < fill_ptr ) ; p++ )
+			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
 				;
-			if( unlikely( p >= fill_ptr ) )
+			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
 			*/
-			if( likely( (*p) == HTTP_RETURN ) )
+			if( LIKELY( (*p) == HTTP_RETURN ) )
 			{
-				if( unlikely( p+1 >= fill_ptr ) )
+				if( UNLIKELY( p+1 >= fill_ptr ) )
 				{
 					return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 				}
-				else if( likely( *(p+1) == HTTP_NEWLINE ) )
+				else if( LIKELY( *(p+1) == HTTP_NEWLINE ) )
 				{
+					p += 2 ;
 					if( e->headers.content_length > 0 )
 					{
-						e->body = p + 2 ;
+						e->body = p ;
 						e->parse_step = FASTERHTTP_PARSESTEP_BODY ;
 						goto _GOTO_PARSESTEP_BODY;
 					}
+					else if( e->headers.transfer_encoding__chunked == 1 )
+					{
+						e->body = p ;
+						e->parse_step = FASTERHTTP_PARSESTEP_CHUNKED_SIZE ;
+						goto _GOTO_PARSESTEP_CHUNKED_SIZE;
+					}
 					else
 					{
-						b->process_ptr = p + 2 ;
+						b->process_ptr = p ;
 						e->parse_step = FASTERHTTP_PARSESTEP_DONE ;
 						return 0;
 					}
 				}
 			}
-			else if( likely( (*p) == HTTP_NEWLINE ) )
+			else if( LIKELY( (*p) == HTTP_NEWLINE ) )
 			{
 				if( e->headers.content_length > 0 )
 				{
@@ -1034,22 +1021,22 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			SetTimeval( 14 );
 #endif
 			
-			for( ; likely( (*p) != ' ' && (*p) != ':' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
+			for( ; LIKELY( (*p) != ' ' && (*p) != ':' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
 				;
-			if( unlikely( p >= fill_ptr ) )
+			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( unlikely( (*p) == HTTP_NEWLINE ) )
+			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADER_INVALID;
 			p_header->name_len = p - p_header->name_ptr ;
 			
-			for( ; likely( (*p) != ':' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
+			for( ; LIKELY( (*p) != ':' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
 				;
-			if( unlikely( (*p) == HTTP_NEWLINE ) )
+			if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADER_INVALID;
-			else if( unlikely( p >= fill_ptr ) )
+			else if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
@@ -1068,14 +1055,14 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			SetTimeval( 15 );
 #endif
 			
-			for( ; unlikely( (*p) == ' ' && p < fill_ptr ) ; p++ )
+			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
 				;
-			if( unlikely( p >= fill_ptr ) )
+			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( unlikely( (*p) == HTTP_NEWLINE ) )
+			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADER_INVALID;
 			p_header->value_ptr = p ;
 			p++;
@@ -1092,25 +1079,35 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			SetTimeval( 16 );
 #endif
 			
-			for( ; likely( (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
+			for( ; LIKELY( (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
 				;
-			if( unlikely( p >= fill_ptr ) )
+			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
 			p_header->value_len = p - p_header->value_ptr ;
-			/*
-			for( p2 = p - 1 ; unlikely( (*p2) == ' ' || (*p2) == HTTP_RETURN ) ; p2-- )
-				e->headers.header.value_len--;
-			*/
+			for( p2 = p - 1 ; UNLIKELY( (*p2) == ' ' || (*p2) == HTTP_RETURN ) ; p2-- )
+				p_header->value_len--;
 			p++;
 			
-			if( unlikely( p_header->name_len == sizeof(HTTP_HEADER_CONTENT_LENGTH)-1 && STRNICMP( p_header->name_ptr , == , HTTP_HEADER_CONTENT_LENGTH , sizeof(HTTP_HEADER_CONTENT_LENGTH)-1 ) ) )
-				e->headers.content_length = strtol( e->headers.header.value_ptr , NULL , 10 ) ;
+			if( UNLIKELY( p_header->name_len == sizeof(HTTP_HEADER_CONTENT_LENGTH)-1 && STRNICMP( p_header->name_ptr , == , HTTP_HEADER_CONTENT_LENGTH , sizeof(HTTP_HEADER_CONTENT_LENGTH)-1 ) ) )
+				e->headers.content_length = strtol( p_header->value_ptr , NULL , 10 ) ;
+			if( UNLIKELY( p_header->name_len == sizeof(HTTP_HEADER_TRANSFERENCODING)-1 && STRNICMP( p_header->name_ptr , == , HTTP_HEADER_TRANSFERENCODING , sizeof(HTTP_HEADER_TRANSFERENCODING)-1 ) ) && UNLIKELY( p_header->value_len == sizeof(HTTP_HEADER_TRANSFERENCODING__CHUNKED)-1 && STRNICMP( p_header->value_ptr , == , HTTP_HEADER_TRANSFERENCODING__CHUNKED , sizeof(HTTP_HEADER_TRANSFERENCODING__CHUNKED)-1 ) ) )
+			{
+				memcpy( &(e->headers.TRANSFERENCODING) , p_header , sizeof(struct HttpHeader) );
+				e->headers.transfer_encoding__chunked = 1 ;
+			}
+			else if( UNLIKELY( p_header->name_len == sizeof(HTTP_HEADER_TRANSFERENCODING)-1 && STRNICMP( p_header->name_ptr , == , HTTP_HEADER_TRANSFERENCODING , sizeof(HTTP_HEADER_TRANSFERENCODING)-1 ) ) )
+			{
+				memcpy( &(e->headers.TRAILER) , p_header , sizeof(struct HttpHeader) );
+			}
+			else
+			{
+				e->headers.header_array_count++;
+			}
 			
-			e->headers.header_array_count++;
-			if( unlikely( e->headers.header_array_count+1 > e->headers.header_array_size ) )
+			if( UNLIKELY( e->headers.header_array_count+1 > e->headers.header_array_size ) )
 			{
 				int			new_header_array_size ;
 				struct HttpHeader	*new_header_array ;
@@ -1129,6 +1126,13 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			SetTimevalAndDiff( 16 );
 #endif
 	
+			if( e->headers.transfer_encoding__chunked == 1 && e->headers.content_length > 0 && UNLIKELY( p_header->name_len == e->headers.TRAILER.value_len && STRNICMP( p_header->name_ptr , == , e->headers.TRAILER.value_ptr , p_header->name_len ) ) )
+			{
+				b->process_ptr = fill_ptr ;
+				e->parse_step = FASTERHTTP_PARSESTEP_DONE ;
+				return 0;
+			}
+			
 			e->parse_step = FASTERHTTP_PARSESTEP_HEADER_NAME0 ;
 			goto _GOTO_PARSESTEP_HEADER_NAME0;
 			
@@ -1136,7 +1140,7 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			
 _GOTO_PARSESTEP_BODY :
 			
-			if( likely( fill_ptr - e->body >= e->headers.content_length ) )
+			if( LIKELY( fill_ptr - e->body >= e->headers.content_length ) )
 			{
 				b->process_ptr = fill_ptr ;
 				e->parse_step = FASTERHTTP_PARSESTEP_DONE ;
@@ -1147,7 +1151,66 @@ _GOTO_PARSESTEP_BODY :
 				b->process_ptr = fill_ptr ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-		
+			
+		case FASTERHTTP_PARSESTEP_CHUNKED_SIZE :
+			
+_GOTO_PARSESTEP_CHUNKED_SIZE :
+			
+			for( ; UNLIKELY( (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
+			{
+				if( LIKELY( '0' <= (*p) && (*p) <= '9' ) )
+					e->chunked_length = e->chunked_length * 10 + (*p) - '0' ;
+				else if( 'a' <= (*p) && (*p) <= 'f' )
+					e->chunked_length = e->chunked_length * 10 + (*p) - 'a' + 10 ;
+				else if( 'A' <= (*p) && (*p) <= 'F' )
+					e->chunked_length = e->chunked_length * 10 + (*p) - 'A' + 10 ;
+				e->chunked_length_length++;
+			}
+			if( UNLIKELY( p >= fill_ptr ) )
+			{
+				b->process_ptr = p ;
+				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
+			}
+			e->chunked_length_length++;
+			p++;
+			if( e->chunked_length == 0 )
+			{
+				if( e->headers.TRAILER.name_ptr )
+				{
+					e->parse_step = FASTERHTTP_PARSESTEP_HEADER_NAME0 ;
+					goto _GOTO_PARSESTEP_HEADER_NAME0;
+				}
+				
+				b->process_ptr = fill_ptr ;
+				e->parse_step = FASTERHTTP_PARSESTEP_DONE ;
+				return 0;
+			}
+			
+			e->chunked_body = p ;
+			e->parse_step = FASTERHTTP_PARSESTEP_CHUNKED_DATA ;
+			
+		case FASTERHTTP_PARSESTEP_CHUNKED_DATA :
+			
+			if( LIKELY( fill_ptr - e->chunked_body >= e->chunked_length ) )
+			{
+				int		len = ( e->headers.content_length == 0 ? 0 : 2 ) ;
+				memmove( e->chunked_body - e->chunked_length_length - len , e->chunked_body , fill_ptr - e->chunked_body );
+				fill_ptr -= e->chunked_length_length - len ;
+				p = e->chunked_body - e->chunked_length_length + e->chunked_length + 2 ;
+				
+				e->headers.content_length += e->chunked_length ;
+				
+				e->parse_step = FASTERHTTP_PARSESTEP_CHUNKED_SIZE ;
+				e->chunked_length = 0 ;
+				e->chunked_length_length = 0 ;
+				goto _GOTO_PARSESTEP_CHUNKED_SIZE;
+			}
+			else
+			{
+				b->process_ptr = fill_ptr ;
+				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
+			}
+			
 		case FASTERHTTP_PARSESTEP_DONE :
 			
 			return 0;
@@ -1389,35 +1452,77 @@ int GetHttpHeaderLen_VERSION( struct HttpEnv *e )
 	return e->headers.VERSION.value_len;
 }
 
-char *GetHttpHeaderPtr_STATUS_CODE( struct HttpEnv *e , int *p_value_len )
+char *GetHttpHeaderPtr_STATUSCODE( struct HttpEnv *e , int *p_value_len )
 {
 	if( p_value_len )
 		(*p_value_len) = e->headers.STATUSCODE.value_len ;
 	return e->headers.STATUSCODE.value_ptr;
 }
 
-int GetHttpHeaderLen_STATUS_CODE( struct HttpEnv *e )
+int GetHttpHeaderLen_STATUSCODE( struct HttpEnv *e )
 {
 	return e->headers.STATUSCODE.value_len;
 }
 
-char *GetHttpHeaderPtr_REASON_PHRASE( struct HttpEnv *e , int *p_value_len )
+char *GetHttpHeaderPtr_REASONPHRASE( struct HttpEnv *e , int *p_value_len )
 {
 	if( p_value_len )
 		(*p_value_len) = e->headers.REASONPHRASE.value_len ;
 	return e->headers.REASONPHRASE.value_ptr;
 }
 
-int GetHttpHeaderLen_REASON_PHRASE( struct HttpEnv *e )
+int GetHttpHeaderLen_REASONPHRASE( struct HttpEnv *e )
 {
 	return e->headers.REASONPHRASE.value_len;
+}
+
+char *GetHttpHeaderPtr_TRANSFERENCODING( struct HttpEnv *e , int *p_value_len )
+{
+	if( p_value_len )
+		(*p_value_len) = e->headers.TRANSFERENCODING.value_len ;
+	return e->headers.TRANSFERENCODING.value_ptr;
+}
+
+int GetHttpHeaderLen_TRANSFERENCODING( struct HttpEnv *e )
+{
+	return e->headers.TRANSFERENCODING.value_len;
+}
+
+char *GetHttpHeaderPtr_TRAILER( struct HttpEnv *e , int *p_value_len )
+{
+	if( p_value_len )
+		(*p_value_len) = e->headers.TRAILER.value_len ;
+	return e->headers.TRAILER.value_ptr;
+}
+
+int GetHttpHeaderLen_TRAILER( struct HttpEnv *e )
+{
+	return e->headers.TRAILER.value_len;
+}
+
+struct HttpHeader *QueryHttpHeader( struct HttpEnv *e , char *name )
+{
+	int			i ;
+	struct HttpHeader	*p_header = NULL ;
+	int			name_len ;
+	
+	name_len = strlen(name) ;
+	for( i = 0 , p_header = e->headers.header_array ; i < e->headers.header_array_size ; i++ , p_header++ )
+	{
+		if( p_header->name_ptr && p_header->name_len == name_len && MEMCMP( p_header->name_ptr , == , name , name_len ) )
+		{
+			return p_header;
+		}
+	}
+	
+	return NULL;
 }
 
 char *GetHttpHeaderPtr( struct HttpEnv *e , char *name , int *p_value_len )
 {
 	struct HttpHeader	*p_header = NULL ;
 	
-	p_header = QueryHttpHeader( &(e->headers) , name ) ;
+	p_header = QueryHttpHeader( e , name ) ;
 	if( p_header == NULL )
 		return NULL;
 	
@@ -1430,7 +1535,7 @@ int GetHttpHeaderLen( struct HttpEnv *e , char *name )
 {
 	struct HttpHeader	*p_header = NULL ;
 	
-	p_header = QueryHttpHeader( &(e->headers) , name ) ;
+	p_header = QueryHttpHeader( e , name ) ;
 	if( p_header == NULL )
 		return 0;
 	
