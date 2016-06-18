@@ -142,7 +142,7 @@ static int test()
 					"2\r\n"
 					"bc\r\n"
 					"0\r\n"
-					"Content-MD5: 1234567890ABCDEF" ) ;
+					"Content-MD5: 1234567890ABCDEF\r\n" ) ;
 	if( nret )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );

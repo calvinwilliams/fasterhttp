@@ -168,6 +168,7 @@ extern "C" {
 #define HTTP_HEADER_CONTENT_LENGTH			"Content-Length"
 #define HTTP_HEADER_TRANSFERENCODING			"Transfer-Encoding"
 #define HTTP_HEADER_TRANSFERENCODING__CHUNKED		"chunked"
+#define HTTP_HEADER_TRAILER				"Trailer"
 
 struct HttpBuffer ;
 struct HttpEnv ;
@@ -246,6 +247,7 @@ _WINDLL_FUNC char *GetHttpHeaderNamePtr( struct HttpHeader *p_header , int *p_ke
 _WINDLL_FUNC int GetHttpHeaderNameLen( struct HttpHeader *p_header );
 _WINDLL_FUNC char *GetHttpHeaderValuePtr( struct HttpHeader *p_header , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderValueLen( struct HttpHeader *p_header );
+
 _WINDLL_FUNC char *GetHttpBodyPtr( struct HttpEnv *e , int *p_body_len );
 _WINDLL_FUNC int GetHttpBodyLen( struct HttpEnv *e );
 

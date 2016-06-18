@@ -9,3 +9,5 @@ _HDERINST	=	$(_HDERBASE)
 _LIBINST	=	$(_LIBBASE)
 _BININST	=	$(_BINBASE)
 
+# -fprofile-arcs -ftest-coverage \
+
