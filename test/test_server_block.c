@@ -78,7 +78,7 @@ int test_server_block()
 	
 	memset( & listen_addr , 0x00 , sizeof(struct sockaddr_in) );
 	listen_addr.sin_family = AF_INET;
-	listen_addr.sin_addr.s_addr = inet_addr( "0.0.0.0" );
+	listen_addr.sin_addr.s_addr = inet_addr( "127.0.0.1" );
 	listen_addr.sin_port = htons( (unsigned short)9527 );
 	
 	nret = bind( listen_sock , (struct sockaddr *) & listen_addr , sizeof(struct sockaddr) ) ;

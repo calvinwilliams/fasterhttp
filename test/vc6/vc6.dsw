@@ -15,7 +15,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "test"=.\test\test.dsp - Package Owner=<4>
+Project: "test_client_block"=.\test_client_block\test_client_block.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -27,7 +27,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "test2"=.\test2\test2.dsp - Package Owner=<4>
+Project: "test_client_nonblock"=.\test_client_nonblock\test_client_nonblock.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -39,7 +39,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "test3"=.\test3\test3.dsp - Package Owner=<4>
+Project: "test_client_nonblock_slow"=.\test_client_nonblock_slow\test_client_nonblock_slow.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -51,7 +51,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "test4"=.\test4\test4.dsp - Package Owner=<4>
+Project: "test_demo"=.\test_demo\test_demo.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -63,7 +63,55 @@ Package=<4>
 
 ###############################################################################
 
-Project: "test5"=.\test5\test5.dsp - Package Owner=<4>
+Project: "test_failure"=.\test_failure\test_failure.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "test_server_block"=.\test_server_block\test_server_block.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "test_server_nonblock"=.\test_server_nonblock\test_server_nonblock.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "test_server_nonblock_slow"=.\test_server_nonblock_slow\test_server_nonblock_slow.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "test_success"=.\test_success\test_success.dsp - Package Owner=<4>
 
 Package=<5>
 {{{

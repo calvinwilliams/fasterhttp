@@ -20,7 +20,7 @@ static int TestParseHttpRequest( struct HttpEnv *e , char *str )
 	
 	memset( & connect_addr , 0x00 , sizeof(struct sockaddr_in) );
 	connect_addr.sin_family = AF_INET;
-	connect_addr.sin_addr.s_addr = inet_addr( "0.0.0.0" );
+	connect_addr.sin_addr.s_addr = inet_addr( "127.0.0.1" );
 	connect_addr.sin_port = htons( (unsigned short)9527 );
 	
 	nret = connect( connect_sock , (struct sockaddr *) & connect_addr , sizeof(struct sockaddr) ) ;
