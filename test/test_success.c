@@ -43,7 +43,50 @@ static int TestParseHttpRequest( struct HttpEnv *e , char *format , ... )
 	return nret;
 }
 
-static int test()
+static int TestParseHttpResponse( struct HttpEnv *e , char *format , ... )
+{
+	struct HttpBuffer	*b = NULL ;
+	va_list			valist ;
+	
+	int			nret = 0 ;
+	
+	ResetHttpEnv( e );
+	
+	b = GetHttpResponseBuffer( e ) ;
+	
+	va_start( valist , format );
+	nret = StrcatvHttpBuffer( b , format , valist ) ;
+	va_end( valist );
+	if( nret )
+	{
+		printf( "StrcatvHttpBuffer failed[%d]\n" , nret );
+		return -1;
+	}
+	
+	nret = ParseHttpResponse( e ) ;
+	if( nret == 0 )
+	{
+		if( GetHttpHeaderCount( e ) > 0 )
+		{
+			struct HttpHeader *p_header = NULL ;
+			
+			p_header = TravelHttpHeaderPtr( e , NULL ) ;
+			while( p_header )
+			{
+				printf( "HTTP HREADER [%.*s] [%.*s]\n" , GetHttpHeaderNameLen(p_header) , GetHttpHeaderNamePtr(p_header,NULL) , GetHttpHeaderValueLen(p_header) , GetHttpHeaderValuePtr(p_header,NULL) );
+				p_header = TravelHttpHeaderPtr( e , p_header ) ;
+			}
+		}
+		
+		if( GetHttpBodyLen( e ) > 0 )
+		{
+			printf( "HTTP BODY [%.*s]\n" , GetHttpBodyLen(e) , GetHttpBodyPtr(e,NULL) );
+		}
+	}
+	return nret;
+}
+
+static int test_success()
 {
 	struct HttpEnv		*e = NULL ;
 	
@@ -58,13 +101,13 @@ static int test()
 	nret = TestParseHttpRequest( e , "GET / HTTP/1.1\r\n\r\n" ) ;
 	if( nret )
 	{
-		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		printf( "%s:%d | test_success failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );
 		return -1;
 	}
 	else
 	{
-		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
+		printf( "%s:%d | test_success ok[%d]\n" , __FILE__ , __LINE__ , nret );
 	}
 	
 	nret = TestParseHttpRequest( e , "GET / HTTP/1.1\r\n"
@@ -78,13 +121,13 @@ static int test()
 					"\r\n" ) ;
 	if( nret )
 	{
-		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		printf( "%s:%d | test_success failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );
 		return -1;
 	}
 	else
 	{
-		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
+		printf( "%s:%d | test_success ok[%d]\n" , __FILE__ , __LINE__ , nret );
 	}
 	
 	nret = TestParseHttpRequest( e , "POST / HTTP/1.1\r\n"
@@ -93,25 +136,25 @@ static int test()
 					"xyz" ) ;
 	if( nret )
 	{
-		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		printf( "%s:%d | test_success failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );
 		return -1;
 	}
 	else
 	{
-		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
+		printf( "%s:%d | test_success ok[%d]\n" , __FILE__ , __LINE__ , nret );
 	}
 	
 	nret = TestParseHttpRequest( e , "GET /index.html HTTP/1.1\n\n" ) ;
 	if( nret )
 	{
-		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		printf( "%s:%d | test_success failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );
 		return -1;
 	}
 	else
 	{
-		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
+		printf( "%s:%d | test_success ok[%d]\n" , __FILE__ , __LINE__ , nret );
 	}
 	
 	nret = TestParseHttpRequest( e , "POST / HTTP/1.1\r\n"
@@ -124,13 +167,13 @@ static int test()
 					"0\r\n" );
 	if( nret )
 	{
-		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		printf( "%s:%d | test_success failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );
 		return -1;
 	}
 	else
 	{
-		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
+		printf( "%s:%d | test_success ok[%d]\n" , __FILE__ , __LINE__ , nret );
 	}
 	
 	nret = TestParseHttpRequest( e , "POST / HTTP/1.1\r\n"
@@ -145,24 +188,52 @@ static int test()
 					"Content-MD5: 1234567890ABCDEF\r\n" ) ;
 	if( nret )
 	{
-		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		printf( "%s:%d | test_success failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );
 		return -1;
 	}
 	else
 	{
-		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
+		printf( "%s:%d | test_success ok[%d]\n" , __FILE__ , __LINE__ , nret );
+	}
+	
+	nret = TestParseHttpResponse( e , "HTTP/1.1 404 NOT FOUND\r\n"
+					"\r\n" );
+	if( nret )
+	{
+		printf( "%s:%d | test_success failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
+		return -1;
+	}
+	else
+	{
+		printf( "%s:%d | test_success ok[%d]\n" , __FILE__ , __LINE__ , nret );
+	}
+	
+	nret = TestParseHttpResponse( e , "HTTP/1.1 200 OK\r\n"
+					"Content-Length: 3\r\n"
+					"\r\n"
+					"xyz" ) ;
+	if( nret )
+	{
+		printf( "%s:%d | test_success failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
+		return -1;
+	}
+	else
+	{
+		printf( "%s:%d | test_success ok[%d]\n" , __FILE__ , __LINE__ , nret );
 	}
 	
 	DestroyHttpEnv( e );
 	
-	printf( "ALL test is ok!!!\n" );
+	printf( "ALL test_success is ok!!!\n" );
 	
 	return 0;
 }
 
 int main()
 {
-	return -test();
+	return -test_success();
 }
 

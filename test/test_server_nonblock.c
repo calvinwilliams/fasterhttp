@@ -33,7 +33,7 @@ int ProcessHttpRequest( struct HttpEnv *e , void *p )
 	printf( "HTTP BODY    [%.*s]\n" , GetHttpBodyLen(e) , GetHttpBodyPtr(e,NULL) );
 	
 	b = GetHttpResponseBuffer(e) ;
-	nret = StrcatfHttpBuffer( b , "HTTP/1.1 200 OK\r\n"
+	nret = StrcatHttpBuffer( b , "HTTP/1.1 200 OK\r\n"
 					"Content-Length: 17\r\n"
 					"\r\n"
 					"hello fasterhttp!" ) ;
@@ -46,7 +46,7 @@ int ProcessHttpRequest( struct HttpEnv *e , void *p )
 	return 0;
 }
 
-int test4()
+int test_server_nonblock()
 {
 	SOCKET			listen_sock ;
 	struct sockaddr_in	listen_addr ;
@@ -214,7 +214,7 @@ int main()
 	}
 #endif
 	
-	nret = test4() ;
+	nret = test_server_nonblock() ;
 
 #if ( defined _WIN32 )
 	WSACleanup();

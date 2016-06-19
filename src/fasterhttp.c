@@ -33,12 +33,10 @@ struct HttpHeaders
 	struct HttpHeader	STATUSCODE ;
 	struct HttpHeader	REASONPHRASE ;
 	
-	struct HttpHeader	CONTENTLENGTH ;
 	int			content_length ;
 	
-	struct HttpHeader	TRANSFERENCODING ;
-	struct HttpHeader	TRAILER ;
 	char			transfer_encoding__chunked ;
+	struct HttpHeader	TRAILER ;
 	
 	struct HttpHeader	*header_array ;
 	int			header_array_size ;
@@ -125,14 +123,16 @@ struct HttpEnv *CreateHttpEnv()
 
 void ResetHttpEnv( struct HttpEnv *e )
 {
+	struct HttpHeaders	*p_headers = &(e->headers) ;
+	
 	/* struct HttpEnv */
 	
 	SetHttpTimeout( e , FASTERHTTP_TIMEOUT_DEFAULT );
 	
-	if( e->request_buffer.ref_flag == 0 && e->request_buffer.buf_size > FASTERHTTP_REQUEST_BUFSIZE_MAX )
+	if( UNLIKELY( e->request_buffer.ref_flag == 0 && e->request_buffer.buf_size > FASTERHTTP_REQUEST_BUFSIZE_MAX ) )
 		ReallocHttpBuffer( &(e->request_buffer) , FASTERHTTP_REQUEST_BUFSIZE_DEFAULT );
 	CleanHttpBuffer( &(e->request_buffer) );
-	if( e->response_buffer.ref_flag == 0 && e->response_buffer.buf_size > FASTERHTTP_RESPONSE_BUFSIZE_MAX )
+	if( UNLIKELY( e->response_buffer.ref_flag == 0 && e->response_buffer.buf_size > FASTERHTTP_RESPONSE_BUFSIZE_MAX ) )
 		ReallocHttpBuffer( &(e->response_buffer) , FASTERHTTP_RESPONSE_BUFSIZE_DEFAULT );
 	CleanHttpBuffer( &(e->response_buffer) );
 	
@@ -141,28 +141,39 @@ void ResetHttpEnv( struct HttpEnv *e )
 	e->body = NULL ;
 	
 	e->chunked_body = NULL ;
+	e->chunked_body_end = NULL ;
 	e->chunked_length = 0 ;
 	e->chunked_length_length = 0 ;
 	
 	/* struct HttpHeaders */
 	
-	e->headers.content_length = 0 ;
+	p_headers->METHOD.value_ptr = NULL ;
+	p_headers->METHOD.value_len = 0 ;
+	p_headers->URI.value_ptr = NULL ;
+	p_headers->URI.value_len = 0 ;
+	p_headers->VERSION.value_ptr = NULL ;
+	p_headers->VERSION.value_len = 0 ;
+	p_headers->STATUSCODE.value_ptr = NULL ;
+	p_headers->STATUSCODE.value_len = 0 ;
+	p_headers->REASONPHRASE.value_ptr = NULL ;
+	p_headers->REASONPHRASE.value_len = 0 ;
+	p_headers->content_length = 0 ;
+	p_headers->TRAILER.value_ptr = NULL ;
+	p_headers->TRAILER.value_len = 0 ;
+	p_headers->transfer_encoding__chunked = 0 ;
 	
-	e->headers.transfer_encoding__chunked = 0 ;
-	
-	if( e->headers.header_array_size > FASTERHTTP_HEADER_ARRAYSIZE_MAX )
+	if( UNLIKELY( p_headers->header_array_size > FASTERHTTP_HEADER_ARRAYSIZE_MAX ) )
 	{
 		struct HttpHeader	*p = NULL ;
-		p = (struct HttpHeader *)realloc( e->headers.header_array , sizeof(struct HttpHeader) * FASTERHTTP_HEADER_ARRAYSIZE_DEFAULT ) ;
+		p = (struct HttpHeader *)realloc( p_headers->header_array , sizeof(struct HttpHeader) * FASTERHTTP_HEADER_ARRAYSIZE_DEFAULT ) ;
 		if( p )
 		{
-			memset( p , 0x00 , sizeof(struct HttpHeader) * e->headers.header_array_size );
-			e->headers.header_array = p ;
-			e->headers.header_array_size = FASTERHTTP_HEADER_ARRAYSIZE_DEFAULT ;
-			e->headers.header_array_count = 0 ;
+			memset( p , 0x00 , sizeof(struct HttpHeader) * p_headers->header_array_size );
+			p_headers->header_array = p ;
+			p_headers->header_array_size = FASTERHTTP_HEADER_ARRAYSIZE_DEFAULT ;
 		}
 	}
-	CleanHttpHeader( &(e->headers) );
+	CleanHttpHeader( p_headers );
 	
 	return;
 }
@@ -213,9 +224,25 @@ char *GetHttpBufferBase( struct HttpBuffer *b )
 	return b->base;
 }
 
-long GetHttpBufferLength( struct HttpBuffer *b )
+int GetHttpBufferLength( struct HttpBuffer *b )
 {
 	return b->fill_ptr-b->base;
+}
+
+char *GetHttpBufferFillPtr( struct HttpBuffer *b )
+{
+	return b->fill_ptr;
+}
+
+int GetHttpBufferRemainLength( struct HttpBuffer *b )
+{
+	return b->buf_size-1-(b->fill_ptr-b->base);
+}
+
+void OffsetHttpBufferFillPtr( struct HttpBuffer *b , int len )
+{
+	b->fill_ptr += len ;
+	return;
 }
 
 void CleanHttpBuffer( struct HttpBuffer *b )
@@ -296,7 +323,7 @@ int StrcatfHttpBuffer( struct HttpBuffer *b , char *format , ... )
 
 int StrcatvHttpBuffer( struct HttpBuffer *b , char *format , va_list valist )
 {
-	long		len ;
+	int		len ;
 	
 	while(1)
 	{
@@ -469,52 +496,61 @@ static int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struc
 	return 0;
 }
 
-#define DEBUG_TIMEVAL	0
-
-#if DEBUG_TIMEVAL
-#define TIMEVAL_COUNT	40
-static struct timeval	tv1[TIMEVAL_COUNT] = { {0,0} } , tv2[TIMEVAL_COUNT] = { {0,0} } , tvdiff[TIMEVAL_COUNT] = { {0,0} } ;
-static void SetTimeval( int index )
+static int ReceiveHttpBuffer1( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpBuffer *b )
 {
-	gettimeofday( tv1+index , NULL );
+	struct timeval	t1 , t2 ;
+	fd_set		read_fds ;
+	long		len ;
+	int		nret = 0 ;
 	
-	return;
-}
-	
-static void SetTimevalAndDiff( int index )
-{
-	gettimeofday( tv2+index , NULL );
-	
-	tvdiff[index].tv_sec += ( tv2[index].tv_sec - tv1[index].tv_sec ) ;
-	tvdiff[index].tv_usec += ( tv2[index].tv_usec - tv1[index].tv_usec ) ;
-	while( tvdiff[index].tv_usec < 0 )
+	while( (b->fill_ptr-b->base) >= b->buf_size-1 )
 	{
-		tvdiff[index].tv_usec += 1000000 ;
-		tvdiff[index].tv_sec--;
-	}
-	while( tvdiff[index].tv_usec > 1000000 )
-	{
-		tvdiff[index].tv_usec -= 1000000 ;
-		tvdiff[index].tv_sec++;
+		nret = ReallocHttpBuffer( b , -1 ) ;
+		if( nret )
+			return nret;
 	}
 	
-	return;
-}
-#endif
-
-void _FASTERHTTP_PrintTimevalDiff()
-{
-#if DEBUG_TIMEVAL
-	int	index ;
-	
-	for( index = 0 ; index < sizeof(tvdiff)/sizeof(tvdiff[0]) ; index++ )
-	{
-		printf( "index[%d] tvdiff[%06ld.%06ld]\n" , index , tvdiff[index].tv_sec , tvdiff[index].tv_usec );
-	}
+#if ( defined _WIN32 )
+	time( &(t1.tv_sec) );
+#elif ( defined __unix ) || ( defined __linux__ )
+	gettimeofday( & t1 , NULL );
 #endif
 	
-	return;
+	FD_ZERO( & read_fds );
+	FD_SET( sock , & read_fds );
+	
+	nret = select( sock+1 , & read_fds , NULL , NULL , &(e->timeout) ) ;
+	if( nret == 0 )
+	{
+		return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE_TIMEOUT;
+	}
+	else if( nret != 1 )
+	{
+		return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE;
+	}
+	
+	if( ssl == NULL )
+		len = (long)recv( sock , b->fill_ptr , 1 , 0 ) ;
+	else
+		len = (long)SSL_read( ssl , b->fill_ptr , 1 ) ;
+	if( len == -1 )
+		return FASTERHTTP_ERROR_TCP_RECEIVE;
+	else if( len == 0 )
+		return FASTERHTTP_ERROR_HTTP_TRUNCATION;
+	
+#if ( defined _WIN32 )
+	time( &(t2.tv_sec) );
+#elif ( defined __unix ) || ( defined __linux__ )
+	gettimeofday( & t2 , NULL );
+#endif
+	AjustTimeval( & (e->timeout) , & t1 , & t2 );
+	
+	b->fill_ptr += len ;
+	
+	return 0;
 }
+
+#define DEBUG_PARSE	0
 
 int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 {
@@ -534,19 +570,19 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 	
 	int			*p_content_length = &(e->headers.content_length) ;
 	char			*p_transfer_encoding__chunked = & (e->headers.transfer_encoding__chunked) ;
-#if DEBUG_TIMEVAL
-	SetTimeval( 0 );
-#endif
 	
+#if DEBUG_PARSE
+	printf( "DEBUG_PARSE >>>>>>>>> ParseHttpBuffer - b->process_ptr[0x%02X...][%.*s]\n" , b->process_ptr[0] , (int)(b->fill_ptr-b->process_ptr) , b->process_ptr );
+#endif
 	if( UNLIKELY( *(p_parse_step) == FASTERHTTP_PARSESTEP_BEGIN ) )
 	{
 		if( b == &(e->request_buffer) )
 		{
-			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_METHOD0 ;
+			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_METHOD0 ;
 		}
 		else if( b == &(e->response_buffer) )
 		{
-			*(p_parse_step) = FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_VERSION0 ;
+			*(p_parse_step) = FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_VERSION0 ;
 		}
 		else
 		{
@@ -554,16 +590,11 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 		}
 	}
 	
-#if DEBUG_TIMEVAL
-	SetTimevalAndDiff( 0 );
-#endif
-	
 	switch( *(p_parse_step) )
 	{
-		case FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_METHOD0 :
-			
-#if DEBUG_TIMEVAL
-			SetTimeval( 1 );
+		case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_METHOD0 :
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_METHOD0\n" );
 #endif
 			
 			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
@@ -574,22 +605,15 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
 			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
-				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
-			p_METHOD->name_ptr = HTTP_HEADER_METHOD ;
-			p_METHOD->name_len = sizeof(HTTP_HEADER_METHOD)-1 ;
+				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_METHOD->value_ptr = p ;
 			p++;
 			
-#if DEBUG_TIMEVAL
-			SetTimevalAndDiff( 1 );
-#endif
-	
-			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_METHOD ;
+			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_METHOD ;
 			
-		case FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_METHOD :
-			
-#if DEBUG_TIMEVAL
-			SetTimeval( 2 );
+		case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_METHOD :
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_METHOD\n" );
 #endif
 			
 			for( ; LIKELY( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
@@ -600,7 +624,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
 			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
-				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
+				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_METHOD->value_len = p - p_METHOD->value_ptr ;
 			p++;
 			
@@ -655,16 +679,11 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				return FASTERHTTP_ERROR_METHOD_NOT_SUPPORTED;
 			}
 			
-#if DEBUG_TIMEVAL
-			SetTimevalAndDiff( 2 );
-#endif
-	
-			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_URI0 ;
+			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_URI0 ;
 			
-		case FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_URI0 :
-			
-#if DEBUG_TIMEVAL
-			SetTimeval( 3 );
+		case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_URI0 :
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_URI0\n" );
 #endif
 			
 			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
@@ -675,22 +694,15 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
 			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
-				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
-			p_URI->name_ptr = HTTP_HEADER_URI ;
-			p_URI->name_len = sizeof(HTTP_HEADER_URI)-1 ;
+				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_URI->value_ptr = p ;
 			p++;
 			
-#if DEBUG_TIMEVAL
-			SetTimevalAndDiff( 3 );
-#endif
-	
-			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_URI ;
+			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_URI ;
 			
-		case FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_URI :
-			
-#if DEBUG_TIMEVAL
-			SetTimeval( 4 );
+		case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_URI :
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_URI\n" );
 #endif
 			
 			for( ; LIKELY( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
@@ -701,20 +713,15 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
 			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
-				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
+				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_URI->value_len = p - p_URI->value_ptr ;
 			p++;
 			
-#if DEBUG_TIMEVAL
-			SetTimevalAndDiff( 4 );
-#endif
-	
-			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_VERSION0 ;
+			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_VERSION0 ;
 			
-		case FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_VERSION0 :
-			
-#if DEBUG_TIMEVAL
-			SetTimeval( 5 );
+		case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_VERSION0 :
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_VERSION0\n" );
 #endif
 			
 			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
@@ -725,25 +732,18 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
 			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
-				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
-			p_VERSION->name_ptr = HTTP_HEADER_VERSION ;
-			p_VERSION->name_len = sizeof(HTTP_HEADER_VERSION)-1 ;
+				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_VERSION->value_ptr = p ;
 			p++;
 			
-#if DEBUG_TIMEVAL
-			SetTimevalAndDiff( 5 );
-#endif
-	
-			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_VERSION ;
+			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_VERSION ;
 			
-		case FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_VERSION :
-			
-#if DEBUG_TIMEVAL
-			SetTimeval( 6 );
+		case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_VERSION :
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_VERSION\n" );
 #endif
 			
-			for( ; LIKELY( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
+			for( ; LIKELY( (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
 				;
 			if( UNLIKELY( p >= fill_ptr ) )
 			{
@@ -751,8 +751,6 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
 			p_VERSION->value_len = p - p_VERSION->value_ptr ;
-			for( ; UNLIKELY( (*p) != HTTP_NEWLINE ) ; p++ )
-				;
 			if( LIKELY( *(p-1) == HTTP_RETURN ) )
 				p_VERSION->value_len--;
 			p++;
@@ -777,17 +775,12 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				return FASTERHTTP_ERROR_VERSION_NOT_SUPPORTED;
 			}
 			
-#if DEBUG_TIMEVAL
-			SetTimevalAndDiff( 6 );
-#endif
-	
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_HEADER_NAME0 ;
 			goto _GOTO_PARSESTEP_HEADER_NAME0;
 			
-		case FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_VERSION0 :
-			
-#if DEBUG_TIMEVAL
-			SetTimeval( 7 );
+		case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_VERSION0 :
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_VERSION0\n" );
 #endif
 			
 			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
@@ -798,22 +791,15 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
 			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
-				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
-			p_VERSION->name_ptr = HTTP_HEADER_VERSION ;
-			p_VERSION->name_len = sizeof(HTTP_HEADER_VERSION)-1 ;
+				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_VERSION->value_ptr = p ;
 			p++;
 			
-#if DEBUG_TIMEVAL
-			SetTimevalAndDiff( 7 );
-#endif
-	
-			*(p_parse_step) = FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_VERSION ;
+			*(p_parse_step) = FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_VERSION ;
 			
-		case FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_VERSION :
-			
-#if DEBUG_TIMEVAL
-			SetTimeval( 8 );
+		case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_VERSION :
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_VERSION\n" );
 #endif
 			
 			for( ; LIKELY( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
@@ -824,7 +810,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
 			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
-				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
+				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_VERSION->value_len = p - p_VERSION->value_ptr ;
 			p++;
 			
@@ -848,41 +834,30 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				return FASTERHTTP_ERROR_VERSION_NOT_SUPPORTED;
 			}
 			
-#if DEBUG_TIMEVAL
-			SetTimevalAndDiff( 8 );
-#endif
-	
-			*(p_parse_step) = FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_STATUSCODE0 ;
+			*(p_parse_step) = FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_STATUSCODE0 ;
 			
-		case FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_STATUSCODE0 :
-			
-#if DEBUG_TIMEVAL
-			SetTimeval( 9 );
+		case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_STATUSCODE0 :
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_STATUSCODE0\n" );
 #endif
 			
 			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
 				;
 			if( UNLIKELY( p >= fill_ptr ) )
 			{
-				b->process_ptr = p ;return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
+				b->process_ptr = p ;
+				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
 			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
-				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
-			p_STATUSCODE->name_ptr = HTTP_HEADER_STATUSCODE ;
-			p_STATUSCODE->name_len = sizeof(HTTP_HEADER_STATUSCODE)-1 ;
+				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_STATUSCODE->value_ptr = p ;
 			p++;
 			
-#if DEBUG_TIMEVAL
-			SetTimevalAndDiff( 9 );
-#endif
-	
-			*(p_parse_step) = FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_STATUSCODE ;
+			*(p_parse_step) = FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_STATUSCODE ;
 			
-		case FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_STATUSCODE :
-			
-#if DEBUG_TIMEVAL
-			SetTimeval( 10 );
+		case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_STATUSCODE :
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_STATUSCODE\n" );
 #endif
 			
 			for( ; LIKELY( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
@@ -893,20 +868,15 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
 			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
-				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
+				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_STATUSCODE->value_len = p - p_STATUSCODE->value_ptr ;
 			p++;
 			
-#if DEBUG_TIMEVAL
-			SetTimevalAndDiff( 10 );
-#endif
-	
-			*(p_parse_step) = FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_REASONPHRASE0 ;
+			*(p_parse_step) = FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_REASONPHRASE0 ;
 			
-		case FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_REASONPHRASE0 :
-			
-#if DEBUG_TIMEVAL
-			SetTimeval( 11 );
+		case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_REASONPHRASE0 :
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_REASONPHRASE0\n" );
 #endif
 			
 			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
@@ -917,25 +887,18 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
 			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
-				return FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID;
-			p_REASONPHRASE->name_ptr = HTTP_HEADER_REASONPHRASE ;
-			p_REASONPHRASE->name_len = sizeof(HTTP_HEADER_REASONPHRASE)-1 ;
+				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_REASONPHRASE->value_ptr = p ;
 			p++;
 			
-#if DEBUG_TIMEVAL
-			SetTimevalAndDiff( 11 );
-#endif
-	
-			*(p_parse_step) = FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_REASONPHRASE ;
+			*(p_parse_step) = FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_REASONPHRASE ;
 			
-		case FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_REASONPHRASE :
-			
-#if DEBUG_TIMEVAL
-			SetTimeval( 12 );
+		case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_REASONPHRASE :
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_REASONPHRASE\n" );
 #endif
 			
-			for( ; LIKELY( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
+			for( ; LIKELY( (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
 				;
 			if( UNLIKELY( p >= fill_ptr ) )
 			{
@@ -943,37 +906,30 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
 			p_REASONPHRASE->value_len = p - p_REASONPHRASE->value_ptr ;
-			for( ; LIKELY( (*p) != HTTP_NEWLINE ) ; p++ )
-				;
 			if( LIKELY( *(p-1) == HTTP_RETURN ) )
 				p_REASONPHRASE->value_len--;
 			p++;
 			
-#if DEBUG_TIMEVAL
-			SetTimevalAndDiff( 12 );
-#endif
-	
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_HEADER_NAME0 ;
 			goto _GOTO_PARSESTEP_HEADER_NAME0;
 			
 		case FASTERHTTP_PARSESTEP_HEADER_NAME0 :
 			
 _GOTO_PARSESTEP_HEADER_NAME0 :
-			
-#if DEBUG_TIMEVAL
-			SetTimeval( 13 );
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_HEADER_NAME0\n" );
 #endif
 			
 			/*
 			while( UNLIKELY( (*p) == ' ' && p < fill_ptr ) )
 				p++;
+			*/
 			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			*/
-			if( LIKELY( (*p) == HTTP_RETURN ) )
+			else if( LIKELY( (*p) == HTTP_RETURN ) )
 			{
 				if( UNLIKELY( p+1 >= fill_ptr ) )
 				{
@@ -1018,19 +974,16 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 					return 0;
 				}
 			}
-			p_header->name_ptr = p ;
-			p++;
-			
-#if DEBUG_TIMEVAL
-			SetTimevalAndDiff( 13 );
-#endif
-	
-			*(p_parse_step) = FASTERHTTP_PARSESTEP_HEADER_NAME ;
+			else
+			{
+				p_header->name_ptr = p ;
+				p++;
+				*(p_parse_step) = FASTERHTTP_PARSESTEP_HEADER_NAME ;
+			}
 			
 		case FASTERHTTP_PARSESTEP_HEADER_NAME :
-			
-#if DEBUG_TIMEVAL
-			SetTimeval( 14 );
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_HEADER_NAME\n" );
 #endif
 			
 			while( LIKELY( (*p) != ' ' && (*p) != ':' && (*p) != HTTP_NEWLINE && p < fill_ptr ) )
@@ -1055,16 +1008,11 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			}
 			p++;
 			
-#if DEBUG_TIMEVAL
-			SetTimevalAndDiff( 14 );
-#endif
-	
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_HEADER_VALUE0 ;
 			
 		case FASTERHTTP_PARSESTEP_HEADER_VALUE0 :
-			
-#if DEBUG_TIMEVAL
-			SetTimeval( 15 );
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_HEADER_VALUE0\n" );
 #endif
 			
 			while( LIKELY( (*p) == ' ' && p < fill_ptr ) )
@@ -1079,16 +1027,11 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			p_header->value_ptr = p ;
 			p++;
 			
-#if DEBUG_TIMEVAL
-			SetTimevalAndDiff( 15 );
-#endif
-	
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_HEADER_VALUE ;
 			
 		case FASTERHTTP_PARSESTEP_HEADER_VALUE :
-			
-#if DEBUG_TIMEVAL
-			SetTimeval( 16 );
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_HEADER_VALUE\n" );
 #endif
 			
 			while( LIKELY( (*p) != HTTP_NEWLINE && p < fill_ptr ) )
@@ -1144,16 +1087,15 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			}
 			p_header = & (e->headers.header_array[e->headers.header_array_count]) ;
 			
-#if DEBUG_TIMEVAL
-			SetTimevalAndDiff( 16 );
-#endif
-	
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_HEADER_NAME0 ;
 			goto _GOTO_PARSESTEP_HEADER_NAME0;
 			
 		case FASTERHTTP_PARSESTEP_BODY :
 			
 _GOTO_PARSESTEP_BODY :
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_BODY\n" );
+#endif
 			
 			if( LIKELY( fill_ptr - e->body >= *(p_content_length) ) )
 			{
@@ -1170,6 +1112,9 @@ _GOTO_PARSESTEP_BODY :
 		case FASTERHTTP_PARSESTEP_CHUNKED_SIZE :
 			
 _GOTO_PARSESTEP_CHUNKED_SIZE :
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_CHUNKED_SIZE\n" );
+#endif
 			
 			for( ; UNLIKELY( (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
 			{
@@ -1205,6 +1150,9 @@ _GOTO_PARSESTEP_CHUNKED_SIZE :
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_CHUNKED_DATA ;
 			
 		case FASTERHTTP_PARSESTEP_CHUNKED_DATA :
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_CHUNKED_DATA\n" );
+#endif
 			
 			if( LIKELY( fill_ptr - e->chunked_body >= e->chunked_length + 2 ) )
 			{
@@ -1230,10 +1178,16 @@ _GOTO_PARSESTEP_CHUNKED_SIZE :
 			}
 			
 		case FASTERHTTP_PARSESTEP_DONE :
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_DONE\n" );
+#endif
 			
 			return 0;
 
 		default :
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> default\n" );
+#endif
 			return FASTERHTTP_ERROR_INTERNAL;
 	}
 }
@@ -1378,11 +1332,45 @@ int ReceiveHttpResponseNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 		return 0;
 }
 
+int ReceiveHttpResponseNonblock1( SOCKET sock , SSL *ssl , struct HttpEnv *e )
+{
+	int		nret = 0 ;
+	
+	nret = ReceiveHttpBuffer1( sock , ssl , e , &(e->response_buffer) ) ;
+	if( nret )
+		return nret;
+	
+	nret = ParseHttpBuffer( e , &(e->response_buffer) ) ;
+	if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
+		return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
+	else if( nret )
+		return nret;
+	else
+		return 0;
+}
+
 int ReceiveHttpRequestNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 {
 	int		nret = 0 ;
 	
 	nret = ReceiveHttpBuffer( sock , ssl , e , &(e->request_buffer) ) ;
+	if( nret )
+		return nret;
+	
+	nret = ParseHttpBuffer( e , &(e->request_buffer) ) ;
+	if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
+		return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
+	else if( nret )
+		return nret;
+	else
+		return 0;
+}
+
+int ReceiveHttpRequestNonblock1( SOCKET sock , SSL *ssl , struct HttpEnv *e )
+{
+	int		nret = 0 ;
+	
+	nret = ReceiveHttpBuffer1( sock , ssl , e , &(e->request_buffer) ) ;
 	if( nret )
 		return nret;
 	
@@ -1492,18 +1480,6 @@ char *GetHttpHeaderPtr_REASONPHRASE( struct HttpEnv *e , int *p_value_len )
 int GetHttpHeaderLen_REASONPHRASE( struct HttpEnv *e )
 {
 	return e->headers.REASONPHRASE.value_len;
-}
-
-char *GetHttpHeaderPtr_TRANSFERENCODING( struct HttpEnv *e , int *p_value_len )
-{
-	if( p_value_len )
-		(*p_value_len) = e->headers.TRANSFERENCODING.value_len ;
-	return e->headers.TRANSFERENCODING.value_ptr;
-}
-
-int GetHttpHeaderLen_TRANSFERENCODING( struct HttpEnv *e )
-{
-	return e->headers.TRANSFERENCODING.value_len;
 }
 
 char *GetHttpHeaderPtr_TRAILER( struct HttpEnv *e , int *p_value_len )

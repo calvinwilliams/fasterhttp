@@ -1,6 +1,6 @@
 #include "fasterhttp.h"
 
-static int test()
+static int test_demo()
 {
 	struct HttpEnv		*e = NULL ;
 	struct HttpBuffer	*b = NULL ;
@@ -55,13 +55,13 @@ static int test()
 	}
 	else if( nret )
 	{
-		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		printf( "%s:%d | test_demo failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );
 		return -1;
 	}
 	else
 	{
-		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
+		printf( "%s:%d | test_demo ok[%d]\n" , __FILE__ , __LINE__ , nret );
 	}
 	
 	DestroyHttpEnv( e );
@@ -71,6 +71,6 @@ static int test()
 
 int main()
 {
-	return -test();
+	return -test_demo();
 }
 
