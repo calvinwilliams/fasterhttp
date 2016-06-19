@@ -44,11 +44,11 @@ extern "C" {
 #endif
 
 #if __GNUC__ >= 3
-#define likely(x) __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(!!(x), 0)
+#define LIKELY(x) __builtin_expect(!!(x), 1)
+#define UNLIKELY(x) __builtin_expect(!!(x), 0)
 #else
-#define likely(x) (x)
-#define unlikely(x) (x)
+#define LIKELY(x) (x)
+#define UNLIKELY(x) (x)
 #endif
 
 #ifndef STRCMP
@@ -101,7 +101,7 @@ extern "C" {
 #define FASTERHTTP_ERROR_TCP_SELECT_SEND_TIMEOUT	-42
 #define FASTERHTTP_ERROR_TCP_SEND			-43
 #define FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER		100
-#define FASTERHTTP_ERROR_HTTP_HEADERFIRSTLINE_INVALID	-101
+#define FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID	-101
 #define FASTERHTTP_ERROR_HTTP_HEADER_INVALID		-102
 #define FASTERHTTP_ERROR_HTTP_TRUNCATION		-103
 
@@ -124,23 +124,25 @@ extern "C" {
 #define FASTERHTTP_HEADER_ARRAYSIZE_MAX			1024
 
 #define FASTERHTTP_PARSESTEP_BEGIN				0
-#define FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_METHOD0		110
-#define FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_METHOD		111
-#define FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_URI0		120
-#define FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_URI		121
-#define FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_VERSION0		130
-#define FASTERHTTP_PARSESTEP_REQUESTFIRSTLINE_VERSION		131
-#define FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_VERSION0		150
-#define FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_VERSION		151
-#define FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_STATUSCODE0	160
-#define FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_STATUSCODE	161
-#define FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_REASONPHRASE0	170
-#define FASTERHTTP_PARSESTEP_RESPONSEFIRSTLINE_REASONPHRASE	171
+#define FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_METHOD0		110
+#define FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_METHOD		111
+#define FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_URI0		120
+#define FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_URI		121
+#define FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_VERSION0		130
+#define FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_VERSION		131
+#define FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_VERSION0		150
+#define FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_VERSION		151
+#define FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_STATUSCODE0	160
+#define FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_STATUSCODE	161
+#define FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_REASONPHRASE0	170
+#define FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_REASONPHRASE	171
 #define FASTERHTTP_PARSESTEP_HEADER_NAME0			210
 #define FASTERHTTP_PARSESTEP_HEADER_NAME			211
 #define FASTERHTTP_PARSESTEP_HEADER_VALUE0			220
 #define FASTERHTTP_PARSESTEP_HEADER_VALUE			221
 #define FASTERHTTP_PARSESTEP_BODY				300
+#define FASTERHTTP_PARSESTEP_CHUNKED_SIZE			311
+#define FASTERHTTP_PARSESTEP_CHUNKED_DATA			312
 #define FASTERHTTP_PARSESTEP_DONE				400
 
 #define HTTP_RETURN					'\r'
@@ -164,6 +166,9 @@ extern "C" {
 #define HTTP_VERSION_1_1				"HTTP/1.1"
 
 #define HTTP_HEADER_CONTENT_LENGTH			"Content-Length"
+#define HTTP_HEADER_TRANSFERENCODING			"Transfer-Encoding"
+#define HTTP_HEADER_TRANSFERENCODING__CHUNKED		"chunked"
+#define HTTP_HEADER_TRAILER				"Trailer"
 
 struct HttpBuffer ;
 struct HttpEnv ;
@@ -180,8 +185,13 @@ _WINDLL_FUNC struct timeval *GetHttpElapse( struct HttpEnv *e );
 /* buffer operations */
 _WINDLL_FUNC struct HttpBuffer *GetHttpRequestBuffer( struct HttpEnv *e );
 _WINDLL_FUNC struct HttpBuffer *GetHttpResponseBuffer( struct HttpEnv *e );
+
 _WINDLL_FUNC char *GetHttpBufferBase( struct HttpBuffer *b );
-_WINDLL_FUNC long GetHttpBufferLength( struct HttpBuffer *b );
+_WINDLL_FUNC int GetHttpBufferLength( struct HttpBuffer *b );
+_WINDLL_FUNC char *GetHttpBufferFillPtr( struct HttpBuffer *b );
+_WINDLL_FUNC int GetHttpBufferRemainLength( struct HttpBuffer *b );
+_WINDLL_FUNC void OffsetHttpBufferFillPtr( struct HttpBuffer *b , int len );
+
 _WINDLL_FUNC void CleanHttpBuffer( struct HttpBuffer *b );
 _WINDLL_FUNC int ReallocHttpBuffer( struct HttpBuffer *b , long new_buf_size );
 _WINDLL_FUNC int StrcatHttpBuffer( struct HttpBuffer *b , char *str );
@@ -218,25 +228,30 @@ _WINDLL_FUNC int ParseHttpResponse( struct HttpEnv *e );
 _WINDLL_FUNC int ParseHttpRequest( struct HttpEnv *e );
 
 /* http data */
-_WINDLL_FUNC char *GetHttpHeaderPtr_METHOD( struct HttpEnv *e , long *p_value_len );
+_WINDLL_FUNC char *GetHttpHeaderPtr_METHOD( struct HttpEnv *e , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderLen_METHOD( struct HttpEnv *e );
-_WINDLL_FUNC char *GetHttpHeaderPtr_URI( struct HttpEnv *e , long *p_value_len );
+_WINDLL_FUNC char *GetHttpHeaderPtr_URI( struct HttpEnv *e , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderLen_URI( struct HttpEnv *e );
-_WINDLL_FUNC char *GetHttpHeaderPtr_VERSION( struct HttpEnv *e , long *p_value_len );
+_WINDLL_FUNC char *GetHttpHeaderPtr_VERSION( struct HttpEnv *e , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderLen_VERSION( struct HttpEnv *e );
-_WINDLL_FUNC char *GetHttpHeaderPtr_STATUS_CODE( struct HttpEnv *e , long *p_value_len );
-_WINDLL_FUNC int GetHttpHeaderLen_STATUS_CODE( struct HttpEnv *e );
-_WINDLL_FUNC char *GetHttpHeaderPtr_REASON_PHRASE( struct HttpEnv *e , long *p_value_len );
-_WINDLL_FUNC int GetHttpHeaderLen_REASON_PHRASE( struct HttpEnv *e );
-_WINDLL_FUNC char *GetHttpHeaderPtr( struct HttpEnv *e , char *name , long *p_value_len );
+_WINDLL_FUNC char *GetHttpHeaderPtr_STATUSCODE( struct HttpEnv *e , int *p_value_len );
+_WINDLL_FUNC int GetHttpHeaderLen_STATUSCODE( struct HttpEnv *e );
+_WINDLL_FUNC char *GetHttpHeaderPtr_REASONPHRASE( struct HttpEnv *e , int *p_value_len );
+_WINDLL_FUNC int GetHttpHeaderLen_REASONPHRASE( struct HttpEnv *e );
+_WINDLL_FUNC char *GetHttpHeaderPtr_TRAILER( struct HttpEnv *e , int *p_value_len );
+_WINDLL_FUNC int GetHttpHeaderLen_TRAILER( struct HttpEnv *e );
+
+_WINDLL_FUNC struct HttpHeader *QueryHttpHeader( struct HttpEnv *e , char *name );
+_WINDLL_FUNC char *GetHttpHeaderPtr( struct HttpEnv *e , char *name , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderLen( struct HttpEnv *e , char *name );
 _WINDLL_FUNC int GetHttpHeaderCount( struct HttpEnv *e );
 _WINDLL_FUNC struct HttpHeader *TravelHttpHeaderPtr( struct HttpEnv *e , struct HttpHeader *p_header );
-_WINDLL_FUNC char *GetHttpHeaderNamePtr( struct HttpHeader *p_header , long *p_key_len );
+_WINDLL_FUNC char *GetHttpHeaderNamePtr( struct HttpHeader *p_header , int *p_key_len );
 _WINDLL_FUNC int GetHttpHeaderNameLen( struct HttpHeader *p_header );
-_WINDLL_FUNC char *GetHttpHeaderValuePtr( struct HttpHeader *p_header , long *p_value_len );
+_WINDLL_FUNC char *GetHttpHeaderValuePtr( struct HttpHeader *p_header , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderValueLen( struct HttpHeader *p_header );
-_WINDLL_FUNC char *GetHttpBodyPtr( struct HttpEnv *e , long *p_body_len );
+
+_WINDLL_FUNC char *GetHttpBodyPtr( struct HttpEnv *e , int *p_body_len );
 _WINDLL_FUNC int GetHttpBodyLen( struct HttpEnv *e );
 
 #endif

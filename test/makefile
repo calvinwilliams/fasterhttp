@@ -8,20 +8,28 @@
 ###### 源文件配置区
 #@ c_FILE
 c_FILE		=	\
-			test.c \
-			test2.c \
-			test3.c \
-			test4.c \
-			test5.c \
+			test_demo.c \
+			test_success.c \
+			test_failure.c \
+			test_server_block.c \
+			test_server_nonblock.c \
+			test_server_nonblock_slow.c \
+			test_client_block.c \
+			test_client_nonblock.c \
+			test_client_nonblock_slow.c \
 			press.c \
 
 ###### 目标文件、安装目录配置区
 include makeinstall
-BIN		=	test \
-			test2 \
-			test3 \
-			test4 \
-			test5 \
+BIN		=	test_demo \
+			test_success \
+			test_failure \
+			test_server_block \
+			test_server_nonblock \
+			test_server_nonblock_slow \
+			test_client_block \
+			test_client_nonblock \
+			test_client_nonblock_slow \
 			press \
 
 ###### 编译选项
@@ -46,21 +54,33 @@ CLEAN_ADDITION	=
 include $(MKTPLDIR)/makeobj_$(MKTPLOS).inc
 
 ###### 目标文件依赖关系
-test		:	test.o
-	$(CC) -o $@ test.o $(LFLAGS)
+test_demo		:	test_demo.o
+	$(CC) -o $@ test_demo.o $(LFLAGS)
 
-test2		:	test2.o
-	$(CC) -o $@ test2.o $(LFLAGS)
+test_success		:	test_success.o
+	$(CC) -o $@ test_success.o $(LFLAGS)
 
-test3		:	test3.o
-	$(CC) -o $@ test3.o $(LFLAGS)
+test_failure		:	test_failure.o
+	$(CC) -o $@ test_failure.o $(LFLAGS)
 
-test4		:	test4.o
-	$(CC) -o $@ test4.o $(LFLAGS)
+test_server_block	:	test_server_block.o
+	$(CC) -o $@ test_server_block.o $(LFLAGS)
 
-test5		:	test5.o
-	$(CC) -o $@ test5.o $(LFLAGS)
+test_server_nonblock	:	test_server_nonblock.o
+	$(CC) -o $@ test_server_nonblock.o $(LFLAGS)
 
-press		:	press.o
+test_server_nonblock_slow:	test_server_nonblock_slow.o
+	$(CC) -o $@ test_server_nonblock_slow.o $(LFLAGS)
+
+test_client_block	:	test_client_block.o
+	$(CC) -o $@ test_client_block.o $(LFLAGS)
+
+test_client_nonblock	:	test_client_nonblock.o
+	$(CC) -o $@ test_client_nonblock.o $(LFLAGS)
+
+test_client_nonblock_slow:	test_client_nonblock_slow.o
+	$(CC) -o $@ test_client_nonblock_slow.o $(LFLAGS)
+
+press			:	press.o
 	$(CC) -o $@ press.o $(LFLAGS)
 

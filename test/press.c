@@ -18,9 +18,7 @@
     "__utmz=xxxxxxxxx.xxxxxxxxxx.x.x.utmccn=(referral)|utmcsr=reader.livedoor.com|utmcct=/reader/|utmcmd=referral\r\n"             \
     "\r\n"
 
-void _FASTERHTTP_PrintTimevalDiff();
-
-static int test( int count )
+static int press( int count )
 {
 	struct HttpEnv		*e = NULL ;
 	int			i ;
@@ -41,7 +39,7 @@ static int test( int count )
 	nret = ParseHttpRequest( e ) ;
 	if( nret )
 	{
-		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		printf( "%s:%d | press failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );
 		return -1;
 	}
@@ -74,15 +72,13 @@ static int test( int count )
 		SetHttpBufferPtr( b , REQ , sizeof(REQ) ) ;
 		
 		nret = ParseHttpRequest( e ) ;
-		if( nret )
+		if( UNLIKELY(nret) )
 		{
 			printf( "ParseHttpRequest failed[%d]\n" , nret );
 			DestroyHttpEnv( e );
 			return -1;
 		}
 	}
-	
-	_FASTERHTTP_PrintTimevalDiff();
 	
 	DestroyHttpEnv( e );
 	
@@ -93,7 +89,7 @@ int main( int argc , char *argv[] )
 {
 	if( argc == 1 + 1 )
 	{
-		return -test( atoi(argv[1]) );
+		return -press( atoi(argv[1]) );
 	}
 	else
 	{
