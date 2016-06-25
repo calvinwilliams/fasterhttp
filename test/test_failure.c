@@ -149,6 +149,21 @@ static int test_failure()
 		printf( "%s:%d | test_failure ok[%d]\n" , __FILE__ , __LINE__ , nret );
 	}
 	
+	nret = TestParseHttpRequest( e , "POST / HTTP/1.1\r"
+					"Content-Length: 3\r"
+					"\r"
+					"xyz" ) ;
+	if( ! nret )
+	{
+		printf( "%s:%d | test_failure failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
+		return -1;
+	}
+	else
+	{
+		printf( "%s:%d | test_failure ok[%d]\n" , __FILE__ , __LINE__ , nret );
+	}
+	
 	nret = TestParseHttpResponse( e , "HTTP/1.2 200\r\n"
 					"\r\n" );
 	if( ! nret )

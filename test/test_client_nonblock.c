@@ -142,7 +142,7 @@ static int TestParseHttpRequest( struct HttpEnv *e , char *str )
 	return 0;
 }
 
-int test_client_nonblock()
+int test_client_nonblock_slow()
 {
 	struct HttpEnv		*e = NULL ;
 	
@@ -203,7 +203,25 @@ int test_client_nonblock()
 		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
 	}
 	
-	nret = TestParseHttpRequest( e , "GET /index.html HTTP/1.1\n\n" ) ;
+	nret = TestParseHttpRequest( e , "POST / HTTP/1.1\n"
+					"Content-Length: 12\n"
+					"\n"
+					"only NEWLINE" ) ;
+	if( nret )
+	{
+		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
+		return -1;
+	}
+	else
+	{
+		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
+	}
+	
+	nret = TestParseHttpRequest( e , "POST / HTTP/1.1\r"
+					"Content-Length: 11\r"
+					"\r"
+					"only RETURN" ) ;
 	if( nret )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
@@ -278,7 +296,7 @@ int main()
 	}
 #endif
 	
-	nret = test_client_nonblock() ;
+	nret = test_client_nonblock_slow() ;
 
 #if ( defined _WIN32 )
 	WSACleanup();
