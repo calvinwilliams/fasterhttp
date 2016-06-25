@@ -281,6 +281,67 @@ int ReallocHttpBuffer( struct HttpBuffer *b , long new_buf_size )
 	return 0;
 }
 
+int StrcpyHttpBuffer( struct HttpBuffer *b , char *str )
+{
+	int		len ;
+	
+	len = strlen(str) ;
+	while( len > b->buf_size-1 )
+	{
+		ReallocHttpBuffer( b , -1 );
+	}
+	
+	memcpy( b->base , str , len );
+	b->fill_ptr = b->base + len ;
+	
+	return 0;
+}
+
+int StrcpyfHttpBuffer( struct HttpBuffer *b , char *format , ... )
+{
+	va_list		valist ;
+	int		len ;
+	
+	while(1)
+	{
+		va_start( valist , format );
+		len = VSNPRINTF( b->base , b->buf_size-1 , format , valist ) ;
+		va_end( valist );
+		if( len == -1 || len == b->buf_size-1 )
+		{
+			ReallocHttpBuffer( b , -1 );
+		}
+		else
+		{
+			b->fill_ptr = b->base + len ;
+			break;
+		}
+	}
+	
+	return 0;
+}
+
+int StrcpyvHttpBuffer( struct HttpBuffer *b , char *format , va_list valist )
+{
+	int		len ;
+	
+	while(1)
+	{
+		len = VSNPRINTF( b->base , b->buf_size-1 , format , valist ) ;
+		if( len == -1 || len == b->buf_size-1 )
+		{
+			ReallocHttpBuffer( b , -1 );
+		}
+		else
+		{
+			b->fill_ptr = b->base + len ;
+			break;
+		}
+	}
+	
+	return 0;
+}
+
 int StrcatHttpBuffer( struct HttpBuffer *b , char *str )
 {
 	long		len ;
@@ -604,7 +665,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
+			if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_METHOD->value_ptr = p ;
 			p++;
@@ -623,7 +684,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
+			if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_METHOD->value_len = p - p_METHOD->value_ptr ;
 			p++;
@@ -636,7 +697,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				else if( *(p2) == HTTP_METHOD_PUT[0] && *(p2+1) == HTTP_METHOD_PUT[1] && *(p2+2) == HTTP_METHOD_PUT[2] )
 					;
 				else
-					return FASTERHTTP_ERROR_METHOD_NOT_SUPPORTED;
+					return FASTERHTTP_ERROR_METHOD_INVALID;
 			}
 			else if( LIKELY( p_METHOD->value_len == 4 ) )
 			{
@@ -647,7 +708,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 					&& *(p2+3) == HTTP_METHOD_HEAD[3] )
 					;
 				else
-					return FASTERHTTP_ERROR_METHOD_NOT_SUPPORTED;
+					return FASTERHTTP_ERROR_METHOD_INVALID;
 			}
 			else if( p_METHOD->value_len == 5 )
 			{
@@ -655,7 +716,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 					&& *(p2+3) == HTTP_METHOD_TRACE[3] && *(p2+4) == HTTP_METHOD_TRACE[4] )
 					;
 				else
-					return FASTERHTTP_ERROR_METHOD_NOT_SUPPORTED;
+					return FASTERHTTP_ERROR_METHOD_INVALID;
 			}
 			else if( p_METHOD->value_len == 6 )
 			{
@@ -663,7 +724,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 					&& *(p2+3) == HTTP_METHOD_DELETE[3] && *(p2+4) == HTTP_METHOD_DELETE[4] && *(p2+5) == HTTP_METHOD_DELETE[5] )
 					;
 				else
-					return FASTERHTTP_ERROR_METHOD_NOT_SUPPORTED;
+					return FASTERHTTP_ERROR_METHOD_INVALID;
 			}
 			else if( p_METHOD->value_len == 7 )
 			{
@@ -672,11 +733,11 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 					&& *(p2+6) == HTTP_METHOD_OPTIONS[6] )
 					;
 				else
-					return FASTERHTTP_ERROR_METHOD_NOT_SUPPORTED;
+					return FASTERHTTP_ERROR_METHOD_INVALID;
 			}
 			else
 			{
-				return FASTERHTTP_ERROR_METHOD_NOT_SUPPORTED;
+				return FASTERHTTP_ERROR_METHOD_INVALID;
 			}
 			
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_URI0 ;
@@ -693,7 +754,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
+			if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_URI->value_ptr = p ;
 			p++;
@@ -712,7 +773,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
+			if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_URI->value_len = p - p_URI->value_ptr ;
 			p++;
@@ -731,7 +792,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
+			if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_VERSION->value_ptr = p ;
 			p++;
@@ -790,7 +851,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
+			if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_VERSION->value_ptr = p ;
 			p++;
@@ -809,7 +870,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
+			if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_VERSION->value_len = p - p_VERSION->value_ptr ;
 			p++;
@@ -848,7 +909,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
+			if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_STATUSCODE->value_ptr = p ;
 			p++;
@@ -867,7 +928,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
+			if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_STATUSCODE->value_len = p - p_STATUSCODE->value_ptr ;
 			p++;
@@ -886,7 +947,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
+			if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID;
 			p_REASONPHRASE->value_ptr = p ;
 			p++;
@@ -933,46 +994,46 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			{
 				if( UNLIKELY( p+1 >= fill_ptr ) )
 				{
-					return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
+					return FASTERHTTP_ERROR_HTTP_HEADER_INVALID;
 				}
 				else if( LIKELY( *(p+1) == HTTP_NEWLINE ) )
 				{
 					p += 2 ;
-					if( *(p_content_length) > 0 )
-					{
-						e->body = p ;
-						*(p_parse_step) = FASTERHTTP_PARSESTEP_BODY ;
-						goto _GOTO_PARSESTEP_BODY;
-					}
-					else if( *(p_transfer_encoding__chunked) == 1 )
-					{
-						e->body = p ;
-						e->chunked_body_end = p ;
-						*(p_parse_step) = FASTERHTTP_PARSESTEP_CHUNKED_SIZE ;
-						goto _GOTO_PARSESTEP_CHUNKED_SIZE;
-					}
-					else
-					{
-						b->process_ptr = p ;
-						*(p_parse_step) = FASTERHTTP_PARSESTEP_DONE ;
-						return 0;
-					}
-				}
-			}
-			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
-			{
-				if( *(p_content_length) > 0 )
-				{
-					e->body = p + 1 ;
-					*(p_parse_step) = FASTERHTTP_PARSESTEP_BODY ;
-					goto _GOTO_PARSESTEP_BODY;
 				}
 				else
 				{
-					b->process_ptr = p + 1 ;
-					*(p_parse_step) = FASTERHTTP_PARSESTEP_DONE ;
-					return 0;
+					p++;
 				}
+				
+
+#define _IF_THEN_GO_PARSING_BODY \
+				if( *(p_content_length) > 0 ) \
+				{ \
+					e->body = p ; \
+					*(p_parse_step) = FASTERHTTP_PARSESTEP_BODY ; \
+					goto _GOTO_PARSESTEP_BODY; \
+				} \
+				else if( *(p_transfer_encoding__chunked) == 1 ) \
+				{ \
+					e->body = p ; \
+					e->chunked_body_end = p ; \
+					*(p_parse_step) = FASTERHTTP_PARSESTEP_CHUNKED_SIZE ; \
+					goto _GOTO_PARSESTEP_CHUNKED_SIZE; \
+				} \
+				else \
+				{ \
+					b->process_ptr = p ; \
+					*(p_parse_step) = FASTERHTTP_PARSESTEP_DONE ; \
+					return 0; \
+				}
+				
+				_IF_THEN_GO_PARSING_BODY
+			}
+			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
+			{
+				p++;
+				
+				_IF_THEN_GO_PARSING_BODY
 			}
 			else
 			{
@@ -993,7 +1054,7 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
+			if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADER_INVALID;
 			p_header->name_len = p - p_header->name_ptr ;
 			
@@ -1022,7 +1083,7 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 				b->process_ptr = p ;
 				return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 			}
-			else if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
+			if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADER_INVALID;
 			p_header->value_ptr = p ;
 			p++;
@@ -1213,9 +1274,26 @@ int ResponseHttp( SOCKET sock , SSL *ssl , struct HttpEnv *e , funcProcessHttpRe
 	
 	nret = ReceiveHttpRequest( sock , ssl , e ) ;
 	if( nret )
-		return nret;
+		goto _GOTO_ON_ERROR;
 	
 	nret = pfuncProcessHttpRequest( e , p ) ;
+	if( nret )
+	{
+		nret = HTTP_SERVICE_UNAVAILABLE ;
+		goto _GOTO_ON_ERROR;
+	}
+	
+	nret = SendHttpResponse( sock , ssl , e ) ;
+	if( nret )
+		return nret;
+	
+_GOTO_ON_ERROR :
+	
+	nret = FormatHttpResponseStartLine( abs(nret)/1000 , e ) ;
+	if( nret )
+		return nret;
+	
+	nret = StrcatHttpBuffer( GetHttpResponseBuffer(e) , HTTP_RETURN_NEWLINE ) ;
 	if( nret )
 		return nret;
 	
@@ -1284,6 +1362,142 @@ int ReceiveHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	}
 	
 	return 0;
+}
+
+int FormatHttpResponseStartLine( int status_code , struct HttpEnv *e )
+{
+	struct HttpBuffer	*b = GetHttpResponseBuffer(e) ;
+	
+	int			nret = 0 ;
+	
+	switch( status_code )
+	{
+		case HTTP_CONTINUE :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_CONTINUE_S " Continue" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_SWITCHING_PROTOCOL :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_SWITCHING_PROTOCOL_S " Switching Protocol" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_OK :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_OK_S " OK" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_CREATED :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_CREATED_S " Created" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_ACCEPTED :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_ACCEPTED_S " Accepted" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_NON_AUTHORITATIVE_INFORMATION :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_NON_AUTHORITATIVE_INFORMATION_S " Non Authoritative Information" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_NO_CONTENT :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_NO_CONTENT_S " No Content" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_RESET_CONTENT :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_RESET_CONTENT_S " Reset Content" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_PARTIAL_CONTENT :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_PARTIAL_CONTENT_S " Partial Content" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_MULTIPLE_CHOICES :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_MULTIPLE_CHOICES_S " Multiple Choices" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_MOVED_PERMANNETLY :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_MOVED_PERMANNETLY_S " Moved Permannetly" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_FOUND :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_FOUND_S " Found" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_SEE_OTHER :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_SEE_OTHER_S " See Other" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_NOT_MODIFIED :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_NOT_MODIFIED_S " Not Modified" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_USE_PROXY :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_USE_PROXY_S " Use Proxy" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_TEMPORARY_REDIRECT :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_TEMPORARY_REDIRECT_S " Temporary Redirect" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_BAD_REQUEST :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_BAD_REQUEST_S " Bad Request" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_UNAUTHORIZED :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_UNAUTHORIZED_S " Unauthorized" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_PAYMENT_REQUIRED :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_PAYMENT_REQUIRED_S " Payment Required" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_FORBIDDEN :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_FORBIDDEN_S " Forbidden" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_NOT_FOUND :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_NOT_FOUND_S " Not Found" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_METHOD_NOT_ALLOWED :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_METHOD_NOT_ALLOWED_S " Method Not Allowed" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_NOT_ACCEPTABLE :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_NOT_ACCEPTABLE_S " Not Acceptable" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_PROXY_AUTHENTICATION_REQUIRED :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_PROXY_AUTHENTICATION_REQUIRED_S " Proxy Authentication Required" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_REQUEST_TIMEOUT :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_REQUEST_TIMEOUT_S " Request Timeout" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_CONFLICT :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_CONFLICT_S " Conflict" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_GONE :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_GONE_S " Gone" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_LENGTH_REQUIRED :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_LENGTH_REQUIRED_S " Length Request" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_PRECONDITION_FAILED :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_PRECONDITION_FAILED_S " Precondition Failed" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_REQUEST_ENTITY_TOO_LARGE :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_REQUEST_ENTITY_TOO_LARGE_S " Request Entity Too Large" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_URI_TOO_LONG :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_URI_TOO_LONG_S " Request URI Too Long" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_UNSUPPORTED_MEDIA_TYPE :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_UNSUPPORTED_MEDIA_TYPE_S " Unsupported Media Type" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_REQUESTED_RANGE_NOT_SATISFIABLE :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_REQUESTED_RANGE_NOT_SATISFIABLE_S " Requested Range Not Satisfiable" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_EXPECTATION_FAILED :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_EXPECTATION_FAILED_S " Expectation Failed" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_INTERNAL_SERVER_ERROR :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_INTERNAL_SERVER_ERROR_S " Internal Server Error" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_NOT_IMPLEMENTED :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_NOT_IMPLEMENTED_S " Not Implemented" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_BAD_GATEWAY :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_BAD_GATEWAY_S " Bad Gateway" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_SERVICE_UNAVAILABLE :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_SERVICE_UNAVAILABLE_S " Service Unavailable" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_GATEWAY_TIMEOUT :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_GATEWAY_TIMEOUT_S " Gateway Timeout" HTTP_RETURN_NEWLINE ) ;
+			break;
+		case HTTP_HTTP_VERSION_NOT_SUPPORTED :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_HTTP_VERSION_NOT_SUPPORTED_S " HTTP Version Not Supported" HTTP_RETURN_NEWLINE ) ;
+			break;
+		default :
+			nret = StrcpyHttpBuffer( b , HTTP_VERSION_1_1 " " HTTP_INTERNAL_SERVER_ERROR_S " Internal Server Error" HTTP_RETURN_NEWLINE ) ;
+			break;
+	}
+	
+	return nret;
 }
 
 int SendHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e )

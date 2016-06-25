@@ -119,14 +119,14 @@ int test_server_nonblock_slow_slow()
 			if( nret == 0 )
 			{
 				printf( "select receive timeout , errno[%d]\n" , errno );
-				CLOSESOCKET( accept_sock );
-				return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE_TIMEOUT;
+				nret = FASTERHTTP_ERROR_HTTP_TRUNCATION ;
+				break;
 			}
 			else if( nret != 1 )
 			{
 				printf( "select receive failed , errno[%d]\n" , errno );
-				CLOSESOCKET( accept_sock );
-				return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE;
+				nret = FASTERHTTP_ERROR_HTTP_TRUNCATION ;
+				break;
 			}
 			
 			nret = ReceiveHttpRequestNonblock1( accept_sock , NULL , e ) ;
@@ -137,8 +137,7 @@ int test_server_nonblock_slow_slow()
 			else if( nret )
 			{
 				printf( "ReceiveHttpRequestNonblock1 failed[%d]\n" , nret );
-				CLOSESOCKET( accept_sock );
-				return nret;
+				break;
 			}
 			else
 			{
@@ -146,12 +145,41 @@ int test_server_nonblock_slow_slow()
 			}
 		}
 		
-		nret = ProcessHttpRequest( e , (void*)(&accept_sock) ) ;
 		if( nret )
 		{
-			printf( "ProcessHttpRequest[%d]\n" , nret );
-			CLOSESOCKET( accept_sock );
-			continue;
+			nret = FormatHttpResponseStartLine( abs(nret)/1000 , e ) ;
+			if( nret )
+			{
+				CLOSESOCKET( accept_sock );
+				continue;
+			}
+			
+			nret = StrcatHttpBuffer( GetHttpResponseBuffer(e) , HTTP_RETURN_NEWLINE ) ;
+			if( nret )
+			{
+				CLOSESOCKET( accept_sock );
+				continue;
+			}
+		}
+		else
+		{
+			nret = FormatHttpResponseStartLine( HTTP_OK , e ) ;
+			if( nret )
+			{
+				CLOSESOCKET( accept_sock );
+				continue;
+			}
+			
+			nret = ProcessHttpRequest( e , (void*)(&accept_sock) ) ;
+			if( nret )
+			{
+				nret = FormatHttpResponseStartLine( HTTP_SERVICE_UNAVAILABLE , e ) ;
+				if( nret )
+				{
+					CLOSESOCKET( accept_sock );
+					continue;
+				}
+			}
 		}
 		
 		while(1)
@@ -164,13 +192,13 @@ int test_server_nonblock_slow_slow()
 			{
 				printf( "select send timeout , errno[%d]\n" , errno );
 				CLOSESOCKET( accept_sock );
-				return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE_TIMEOUT;
+				break;
 			}
 			else if( nret != 1 )
 			{
 				printf( "select send failed , errno[%d]\n" , errno );
 				CLOSESOCKET( accept_sock );
-				return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE;
+				break;
 			}
 			
 			nret = SendHttpResponseNonblock( accept_sock , NULL , e ) ;
@@ -182,7 +210,7 @@ int test_server_nonblock_slow_slow()
 			{
 				printf( "SendHttpResponseNonblock failed[%d]\n" , nret );
 				CLOSESOCKET( accept_sock );
-				return nret;
+				break;
 			}
 			else
 			{

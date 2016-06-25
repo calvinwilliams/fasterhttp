@@ -36,6 +36,8 @@ static int test_demo()
 	nret = ParseHttpRequest( e ) ;
 	if( nret == 0 )
 	{
+		printf( "%s:%d | test_demo ok[%d]\n" , __FILE__ , __LINE__ , nret );
+		
 		if( GetHttpHeaderCount( e ) > 0 )
 		{
 			struct HttpHeader *p_header = NULL ;
@@ -53,15 +55,11 @@ static int test_demo()
 			printf( "HTTP BODY [%.*s]\n" , GetHttpBodyLen(e) , GetHttpBodyPtr(e,NULL) );
 		}
 	}
-	else if( nret )
+	else
 	{
 		printf( "%s:%d | test_demo failed[%d]\n" , __FILE__ , __LINE__ , nret );
 		DestroyHttpEnv( e );
 		return -1;
-	}
-	else
-	{
-		printf( "%s:%d | test_demo ok[%d]\n" , __FILE__ , __LINE__ , nret );
 	}
 	
 	DestroyHttpEnv( e );
