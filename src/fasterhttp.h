@@ -31,7 +31,11 @@ extern "C" {
 #include <arpa/inet.h>
 #endif
 
+char *strcasestr(const char *haystack, const char *needle);
+
 #include <openssl/ssl.h>
+
+#include <zlib.h>
 
 #if ( defined _WIN32 )
 #ifndef _WINDLL_FUNC
@@ -68,6 +72,14 @@ extern "C" {
 
 #ifndef MEMCMP
 #define MEMCMP(_a_,_C_,_b_,_n_) ( memcmp(_a_,_b_,_n_) _C_ 0 )
+#endif
+
+#ifndef STRISTR
+#if ( defined _WIN32 )
+#define STRISTR		strstr /* ÒÔºó¸Ä */
+#elif ( defined __unix ) || ( defined _AIX ) || ( defined __linux__ )
+#define STRISTR		strcasestr
+#endif
 #endif
 
 #ifndef SNPRINTF
@@ -246,6 +258,10 @@ extern "C" {
 #define HTTP_HEADER_TRANSFERENCODING			"Transfer-Encoding"
 #define HTTP_HEADER_TRANSFERENCODING__CHUNKED		"chunked"
 #define HTTP_HEADER_TRAILER				"Trailer"
+#define HTTP_HEADER_CONTENTENCODING			"Content-Encoding"
+
+#define HTTP_COMPRESSALGORITHM_GZIP			MAX_WBITS+16
+#define HTTP_COMPRESSALGORITHM_DEFLATE			MAX_WBITS
 
 struct HttpBuffer ;
 struct HttpEnv ;
@@ -258,6 +274,7 @@ _WINDLL_FUNC void DestroyHttpEnv( struct HttpEnv *e );
 /* properties */
 _WINDLL_FUNC void SetHttpTimeout( struct HttpEnv *e , long timeout );
 _WINDLL_FUNC struct timeval *GetHttpElapse( struct HttpEnv *e );
+_WINDLL_FUNC void EnableHttpResponseCompressing( struct HttpEnv *e , char enable_response_compressing );
 
 /* buffer operations */
 _WINDLL_FUNC struct HttpBuffer *GetHttpRequestBuffer( struct HttpEnv *e );
@@ -294,6 +311,7 @@ _WINDLL_FUNC int ReceiveHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e
 /* http server api */
 _WINDLL_FUNC int ReceiveHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e );
 _WINDLL_FUNC int FormatHttpResponseStartLine( int status_code , struct HttpEnv *e );
+_WINDLL_FUNC int FormatHttpResponseLength( struct HttpEnv *e );
 _WINDLL_FUNC int SendHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e );
 
 /* http client api with nonblock */
@@ -334,6 +352,10 @@ _WINDLL_FUNC int GetHttpHeaderValueLen( struct HttpHeader *p_header );
 
 _WINDLL_FUNC char *GetHttpBodyPtr( struct HttpEnv *e , int *p_body_len );
 _WINDLL_FUNC int GetHttpBodyLen( struct HttpEnv *e );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

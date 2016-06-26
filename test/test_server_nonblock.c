@@ -163,13 +163,6 @@ int test_server_nonblock_slow_slow()
 		}
 		else
 		{
-			nret = FormatHttpResponseStartLine( HTTP_OK , e ) ;
-			if( nret )
-			{
-				CLOSESOCKET( accept_sock );
-				continue;
-			}
-			
 			nret = ProcessHttpRequest( e , (void*)(&accept_sock) ) ;
 			if( nret )
 			{

@@ -8,7 +8,13 @@
 ###### 源文件配置区
 #@ c_FILE
 c_FILE		=	\
-			fasterhttp.c \
+			env.c \
+			buffer.c \
+			comm.c \
+			parser.c \
+			http.c \
+			header.c \
+			body.c \
 
 ###### 目标文件、安装目录配置区
 include makeinstall
