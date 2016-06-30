@@ -69,6 +69,8 @@ int test_server_nonblock_slow_slow()
 		return -1;
 	}
 	
+	EnableHttpResponseCompressing( e , 1 );
+	
 	listen_sock = socket( AF_INET , SOCK_STREAM , IPPROTO_TCP ) ;
 	if( listen_sock == -1 )
 	{

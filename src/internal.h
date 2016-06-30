@@ -73,6 +73,8 @@ int ReceiveHttpBuffer1( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct Http
 
 int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b );
 
+void _DumpHexBuffer( FILE *fp , char *buf , long buflen );
+
 #ifdef __cplusplus
 }
 #endif

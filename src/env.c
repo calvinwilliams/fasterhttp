@@ -70,8 +70,6 @@ void ResetHttpEnv( struct HttpEnv *e )
 	SetHttpTimeout( e , FASTERHTTP_TIMEOUT_DEFAULT );
 	if( e->enable_response_compressing == 2 )
 		e->enable_response_compressing = 1 ;
-	else
-		e->enable_response_compressing = 0 ;
 	
 	if( UNLIKELY( e->request_buffer.ref_flag == 0 && e->request_buffer.buf_size > FASTERHTTP_REQUEST_BUFSIZE_MAX ) )
 		ReallocHttpBuffer( &(e->request_buffer) , FASTERHTTP_REQUEST_BUFSIZE_DEFAULT );

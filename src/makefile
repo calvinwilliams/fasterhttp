@@ -15,6 +15,7 @@ c_FILE		=	\
 			http.c \
 			header.c \
 			body.c \
+			util.c \
 
 ###### 目标文件、安装目录配置区
 include makeinstall

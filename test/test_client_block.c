@@ -181,6 +181,22 @@ int test_client_block()
 		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
 	}
 	
+	nret = TestParseHttpRequest( e , "POST / HTTP/1.1\r\n"
+					"Content-Length: 3\r\n"
+					"Content-Encoding: gzip,deflate,*\r\n"
+					"\r\n"
+					"xyz" ) ;
+	if( nret )
+	{
+		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
+		return -1;
+	}
+	else
+	{
+		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
+	}
+	
 	DestroyHttpEnv( e );
 	
 	printf( "ALL test is ok!!!\n" );
