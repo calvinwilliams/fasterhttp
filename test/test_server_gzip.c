@@ -46,9 +46,7 @@ int ProcessHttpRequest( struct HttpEnv *e , void *p )
 	return 0;
 }
 
-int ReceiveHttpRequestNonblock1( SOCKET sock , SSL *ssl , struct HttpEnv *e );
-
-int test_server_nonblock_slow_slow()
+int test_server_block()
 {
 	SOCKET			listen_sock ;
 	struct sockaddr_in	listen_addr ;
@@ -58,7 +56,6 @@ int test_server_nonblock_slow_slow()
 	int			onoff ;
 	
 	struct HttpEnv		*e = NULL ;
-	fd_set			read_fds , write_fds ;
 	
 	int			nret = 0 ;
 	
@@ -68,6 +65,8 @@ int test_server_nonblock_slow_slow()
 		printf( "CreateHttpEnv failed , errno[%d]\n" , errno );
 		return -1;
 	}
+	
+	EnableHttpResponseCompressing( e , 1 );
 	
 	listen_sock = socket( AF_INET , SOCK_STREAM , IPPROTO_TCP ) ;
 	if( listen_sock == -1 )
@@ -110,105 +109,12 @@ int test_server_nonblock_slow_slow()
 		
 		ResetHttpEnv( e );
 		
-		while(1)
-		{
-			FD_ZERO( & read_fds );
-			FD_SET( accept_sock , & read_fds );
-			
-			nret = select( accept_sock+1 , & read_fds , NULL , NULL , GetHttpElapse(e) ) ;
-			if( nret == 0 )
-			{
-				printf( "select receive timeout , errno[%d]\n" , errno );
-				nret = FASTERHTTP_ERROR_HTTP_TRUNCATION ;
-				break;
-			}
-			else if( nret != 1 )
-			{
-				printf( "select receive failed , errno[%d]\n" , errno );
-				nret = FASTERHTTP_ERROR_HTTP_TRUNCATION ;
-				break;
-			}
-			
-			nret = ReceiveHttpRequestNonblock( accept_sock , NULL , e ) ;
-			if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
-			{
-				;
-			}
-			else if( nret )
-			{
-				printf( "ReceiveHttpRequestNonblock failed[%d]\n" , nret );
-				break;
-			}
-			else
-			{
-				break;
-			}
-		}
-		
+		nret = ResponseHttp( accept_sock , NULL , e , & ProcessHttpRequest , (void*)(&accept_sock) ) ;
 		if( nret )
 		{
-			nret = FormatHttpResponseStartLine( abs(nret)/1000 , e ) ;
-			if( nret )
-			{
-				CLOSESOCKET( accept_sock );
-				continue;
-			}
-			
-			nret = StrcatHttpBuffer( GetHttpResponseBuffer(e) , HTTP_RETURN_NEWLINE ) ;
-			if( nret )
-			{
-				CLOSESOCKET( accept_sock );
-				continue;
-			}
-		}
-		else
-		{
-			nret = ProcessHttpRequest( e , (void*)(&accept_sock) ) ;
-			if( nret )
-			{
-				nret = FormatHttpResponseStartLine( HTTP_SERVICE_UNAVAILABLE , e ) ;
-				if( nret )
-				{
-					CLOSESOCKET( accept_sock );
-					continue;
-				}
-			}
-		}
-		
-		while(1)
-		{
-			FD_ZERO( & write_fds );
-			FD_SET( accept_sock , & write_fds );
-			
-			nret = select( accept_sock+1 , NULL , & write_fds , NULL , GetHttpElapse(e) ) ;
-			if( nret == 0 )
-			{
-				printf( "select send timeout , errno[%d]\n" , errno );
-				CLOSESOCKET( accept_sock );
-				break;
-			}
-			else if( nret != 1 )
-			{
-				printf( "select send failed , errno[%d]\n" , errno );
-				CLOSESOCKET( accept_sock );
-				break;
-			}
-			
-			nret = SendHttpResponseNonblock( accept_sock , NULL , e ) ;
-			if( nret == FASTERHTTP_INFO_TCP_SEND_WOULDBLOCK )
-			{
-				;
-			}
-			else if( nret )
-			{
-				printf( "SendHttpResponseNonblock failed[%d]\n" , nret );
-				CLOSESOCKET( accept_sock );
-				break;
-			}
-			else
-			{
-				break;
-			}
+			printf( "ResponseHttp[%d]\n" , nret );
+			CLOSESOCKET( accept_sock );
+			continue;
 		}
 		
 		CLOSESOCKET( accept_sock );
@@ -237,7 +143,7 @@ int main()
 	}
 #endif
 	
-	nret = test_server_nonblock_slow_slow() ;
+	nret = test_server_block() ;
 
 #if ( defined _WIN32 )
 	WSACleanup();

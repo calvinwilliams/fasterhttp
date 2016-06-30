@@ -95,6 +95,8 @@ _DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 		deflateEnd( &stream );
 		return FASTERHTTP_ERROR_INTERNAL;
 	}
+printf( "deflate\n" );
+_DumpHexBuffer( stdout , (char*)out_base , (int)(stream.total_out) );
 	
 	new_buf_size = (body-b->base) + strlen(HTTP_HEADER_CONTENT_LENGTH)+2+10+2 + strlen(HTTP_HEADER_CONTENTENCODING)+2+10+2 + 10+2 + stream.total_out + 1 ;
 	if( new_buf_size > b->buf_size )
@@ -214,6 +216,7 @@ static int UncompressHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b , int 
 	
 	int		nret = 0 ;
 	
+	memset( & stream , 0x00 , sizeof(z_stream) );
 printf( "enter UncompressHttpBuffer\n" );
 _DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 	stream.zalloc = NULL ;
@@ -226,51 +229,58 @@ printf( "compress_algorithm[%d]\n" , compress_algorithm );
 		return FASTERHTTP_ERROR_INTERNAL;
 	}
 	
-printf( "%s:%d\n" , __FILE__ , __LINE__ );
 	in_len = e->headers.content_length ;
-	out_len = in_len * 10 ;
-	out_base = (unsigned char *)malloc( out_len+1 ) ;
+	//out_len = in_len * 10 ;
+	out_len = 10 ;
+	out_base = (Bytef*)malloc( out_len+1 ) ;
 	if( out_base == NULL )
 	{
 		inflateEnd( &stream );
 		return FASTERHTTP_ERROR_INTERNAL;
 	}
+	memset( out_base , 0x00 , out_len+1 );
 	
-printf( "%s:%d\n" , __FILE__ , __LINE__ );
+printf( "111\n" );
 	while(1)
 	{
-printf( "%s:%d\n" , __FILE__ , __LINE__ );
+printf( "222\n" );
+		stream.total_out = 0 ;
 		stream.next_in = (Bytef*)(e->body) ;
 		stream.avail_in = in_len ;
-_DumpHexBuffer( stdout , e->body , in_len );
 		stream.next_out = out_base ;
 		stream.avail_out = out_len ;
-		nret = inflate( &stream , Z_FINISH ) ;
-		if( nret == Z_BUF_ERROR )
+printf( "111 - stream.avail_in[%d] stream.avail_out[%d] stream.total_out[%d]\n" , (int)(stream.avail_in) , (int)(stream.avail_out) , (int)(stream.total_out) );
+		nret = inflate( &stream , Z_NO_FLUSH ) ;
+printf( "222 - stream.avail_in[%d] stream.avail_out[%d] stream.total_out[%d]\n" , (int)(stream.avail_in) , (int)(stream.avail_out) , (int)(stream.total_out) );
+		if( nret != Z_OK )
 		{
-printf( "%s:%d\n" , __FILE__ , __LINE__ );
-			out_len = out_len * 2 ;
-			out_base = (unsigned char *)malloc( out_len+1 ) ;
-			if( out_base == NULL )
-			{
-				inflateEnd( &stream );
-				return FASTERHTTP_ERROR_INTERNAL;
-			}
-		}
-		else if( nret != Z_OK )
-		{
-printf( "%s:%d - nret[%d]\n" , __FILE__ , __LINE__ , nret );
+printf( "!=Z_OK\n" );
 			free( out_base );
 			inflateEnd( &stream );
 			return FASTERHTTP_ERROR_INTERNAL;
 		}
 		else
 		{
-			break;
+			uLong		new_out_len ;
+			Bytef		*new_out_base = NULL ;
+printf( "Z_OK\n" );
+			if( stream.avail_in == 0 )
+				break;
+			
+			new_out_len = out_len * 2 ;
+			new_out_base = (Bytef*)realloc( new_out_base , new_out_len+1 ) ;
+			if( new_out_base == NULL )
+			{
+				free( out_base );
+				inflateEnd( &stream );
+				return FASTERHTTP_ERROR_INTERNAL;
+			}
+			out_len = new_out_len ;
+			out_base = new_out_base ;
 		}
 	}
+printf( "999\n" );
 	
-printf( "%s:%d\n" , __FILE__ , __LINE__ );
 	new_buf_size = (e->body-b->base) + stream.total_out + 1 ;
 	if( new_buf_size > b->buf_size )
 	{
@@ -283,9 +293,9 @@ printf( "%s:%d\n" , __FILE__ , __LINE__ );
 		}
 	}
 	
-printf( "%s:%d\n" , __FILE__ , __LINE__ );
 	memmove( e->body , out_base , stream.total_out );
 	b->fill_ptr = e->body + stream.total_out ;
+	e->headers.content_length = stream.total_out ;
 	
 	free( out_base );
 	inflateEnd( &stream );
