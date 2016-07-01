@@ -51,8 +51,6 @@ static int CompressHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b , char *
 	
 	int		nret = 0 ;
 	
-printf( "enter CompressHttpBuffer\n" );
-_DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 	p_CONTENT_LENGTH = STRISTR( b->base , HTTP_HEADER_CONTENT_LENGTH ) ;
 	if( p_CONTENT_LENGTH == NULL || p_CONTENT_LENGTH >= b->fill_ptr )
 		return 0;
@@ -95,8 +93,6 @@ _DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 		deflateEnd( &stream );
 		return FASTERHTTP_ERROR_INTERNAL;
 	}
-printf( "deflate\n" );
-_DumpHexBuffer( stdout , (char*)out_base , (int)(stream.total_out) );
 	
 	new_buf_size = (body-b->base) + strlen(HTTP_HEADER_CONTENT_LENGTH)+2+10+2 + strlen(HTTP_HEADER_CONTENTENCODING)+2+10+2 + 10+2 + stream.total_out + 1 ;
 	if( new_buf_size > b->buf_size )
@@ -146,8 +142,6 @@ _DumpHexBuffer( stdout , (char*)out_base , (int)(stream.total_out) );
 	
 	free( out_base );
 	deflateEnd( &stream );
-printf( "leave CompressHttpBuffer\n" );
-_DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 	
 	return 0;
 }
@@ -182,10 +176,8 @@ int SendHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 {
 	int		nret = 0 ;
 	
-printf( "e->enable_response_compressing[%d]\n" , e->enable_response_compressing );
 	if( e->enable_response_compressing == 1 )
 	{
-printf( "CompressHttpResponse\n" );
 		nret = CompressHttpResponse( e ) ;
 		if( nret )
 			return nret;
@@ -216,45 +208,36 @@ static int UncompressHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b , int 
 	
 	int		nret = 0 ;
 	
-	memset( & stream , 0x00 , sizeof(z_stream) );
-printf( "enter UncompressHttpBuffer\n" );
-_DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
-	stream.zalloc = NULL ;
-	stream.zfree = NULL ;
-	stream.opaque = NULL ;
-printf( "compress_algorithm[%d]\n" , compress_algorithm );
-	nret = inflateInit2( &stream , compress_algorithm ) ;
-	if( nret != Z_OK )
-	{
-		return FASTERHTTP_ERROR_INTERNAL;
-	}
-	
 	in_len = e->headers.content_length ;
 	//out_len = in_len * 10 ;
 	out_len = 10 ;
 	out_base = (Bytef*)malloc( out_len+1 ) ;
 	if( out_base == NULL )
 	{
-		inflateEnd( &stream );
 		return FASTERHTTP_ERROR_INTERNAL;
 	}
 	memset( out_base , 0x00 , out_len+1 );
 	
-printf( "111\n" );
+	memset( & stream , 0x00 , sizeof(z_stream) );
+	stream.zalloc = NULL ;
+	stream.zfree = NULL ;
+	stream.opaque = NULL ;
+	nret = inflateInit2( &stream , compress_algorithm ) ;
+	if( nret != Z_OK )
+	{
+		free( out_base );
+		return FASTERHTTP_ERROR_INTERNAL;
+	}
+	
+	stream.next_in = (Bytef*)(e->body) ;
+	stream.avail_in = in_len ;
 	while(1)
 	{
-printf( "222\n" );
-		stream.total_out = 0 ;
-		stream.next_in = (Bytef*)(e->body) ;
-		stream.avail_in = in_len ;
-		stream.next_out = out_base ;
-		stream.avail_out = out_len ;
-printf( "111 - stream.avail_in[%d] stream.avail_out[%d] stream.total_out[%d]\n" , (int)(stream.avail_in) , (int)(stream.avail_out) , (int)(stream.total_out) );
+		stream.next_out = out_base + stream.total_out ;
+		stream.avail_out = out_len - stream.total_out ;
 		nret = inflate( &stream , Z_NO_FLUSH ) ;
-printf( "222 - stream.avail_in[%d] stream.avail_out[%d] stream.total_out[%d]\n" , (int)(stream.avail_in) , (int)(stream.avail_out) , (int)(stream.total_out) );
 		if( nret != Z_OK )
 		{
-printf( "!=Z_OK\n" );
 			free( out_base );
 			inflateEnd( &stream );
 			return FASTERHTTP_ERROR_INTERNAL;
@@ -263,23 +246,23 @@ printf( "!=Z_OK\n" );
 		{
 			uLong		new_out_len ;
 			Bytef		*new_out_base = NULL ;
-printf( "Z_OK\n" );
+			
 			if( stream.avail_in == 0 )
 				break;
 			
 			new_out_len = out_len * 2 ;
-			new_out_base = (Bytef*)realloc( new_out_base , new_out_len+1 ) ;
+			new_out_base = (Bytef*)realloc( out_base , new_out_len+1 ) ;
 			if( new_out_base == NULL )
 			{
 				free( out_base );
 				inflateEnd( &stream );
 				return FASTERHTTP_ERROR_INTERNAL;
 			}
+			memset( new_out_base + stream.total_out , 0x00 , new_out_len - stream.total_out );
 			out_len = new_out_len ;
 			out_base = new_out_base ;
 		}
 	}
-printf( "999\n" );
 	
 	new_buf_size = (e->body-b->base) + stream.total_out + 1 ;
 	if( new_buf_size > b->buf_size )
@@ -300,8 +283,6 @@ printf( "999\n" );
 	free( out_base );
 	inflateEnd( &stream );
 	
-printf( "leave UncompressHttpBuffer\n" );
-_DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 	return 0;
 }
 
