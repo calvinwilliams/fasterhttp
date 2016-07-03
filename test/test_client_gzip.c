@@ -1,9 +1,7 @@
 #include "fasterhttp.h"
 
-int test_client_block()
+static int TestParseHttpRequest( struct HttpEnv *e , char *str )
 {
-	struct HttpEnv		*e = NULL ;
-	
 	SOCKET			connect_sock ;
 	struct sockaddr_in	connect_addr ;
 	
@@ -11,12 +9,7 @@ int test_client_block()
 	
 	int			nret = 0 ;
 	
-	e = CreateHttpEnv();
-	if( e == NULL )
-	{
-		printf( "CreateHttpEnv failed , errno[%d]\n" , errno );
-		return -1;
-	}
+	ResetHttpEnv( e );
 	
 	connect_sock = socket( AF_INET , SOCK_STREAM , IPPROTO_TCP ) ;
 	if( connect_sock == -1 )
@@ -38,11 +31,7 @@ int test_client_block()
 	}
 	
 	b = GetHttpRequestBuffer(e) ;
-	nret = StrcatfHttpBuffer( b , "POST / HTTP/1.1\r\n"
-					"Content-Length: 3\r\n"
-					"Accept-Encoding: gzip2,deflate,*\r\n"
-					"\r\n"
-					"xyz" ) ;
+	nret = StrcatHttpBuffer( b , str ) ;
 	if( nret )
 	{
 		printf( "StrcatfHttpBuffer failed[%d] , errno[%d]\n" , nret , errno );
@@ -74,6 +63,70 @@ int test_client_block()
 		{
 			printf( "HTTP BODY [%.*s]\n" , GetHttpBodyLen(e) , GetHttpBodyPtr(e,NULL) );
 		}
+	}
+	
+	return 0;
+}
+
+int test_client_block()
+{
+	struct HttpEnv		*e = NULL ;
+	
+	int			nret = 0 ;
+	
+	e = CreateHttpEnv();
+	if( e == NULL )
+	{
+		printf( "CreateHttpEnv failed , errno[%d]\n" , errno );
+		return -1;
+	}
+	
+	nret = TestParseHttpRequest( e , "POST / HTTP/1.1\r\n"
+					"Content-Length: 3\r\n"
+					"Accept-Encoding: gzip,deflate,*\r\n"
+					"\r\n"
+					"xyz" ) ;
+	if( nret )
+	{
+		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
+		return -1;
+	}
+	else
+	{
+		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
+	}
+	
+	nret = TestParseHttpRequest( e , "POST / HTTP/1.1\r\n"
+					"Content-Length: 3\r\n"
+					"Accept-Encoding: gzip2,deflate,*\r\n"
+					"\r\n"
+					"xyz" ) ;
+	if( nret )
+	{
+		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
+		return -1;
+	}
+	else
+	{
+		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
+	}
+	
+	nret = TestParseHttpRequest( e , "POST / HTTP/1.1\r\n"
+					"Content-Length: 3\r\n"
+					"Accept-Encoding: gzip2,deflate2,*\r\n"
+					"\r\n"
+					"xyz" ) ;
+	if( nret )
+	{
+		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
+		DestroyHttpEnv( e );
+		return -1;
+	}
+	else
+	{
+		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
 	}
 	
 	DestroyHttpEnv( e );

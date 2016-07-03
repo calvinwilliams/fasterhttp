@@ -51,8 +51,6 @@ static int CompressBuffer( struct HttpEnv *e , struct HttpBuffer *b , char *p_co
 	
 	int		nret = 0 ;
 	
-printf( "enter CompressBuffer\n" );
-_DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 	p_CONTENT_LENGTH = STRISTR( b->base , HTTP_HEADER_CONTENT_LENGTH ) ;
 	if( p_CONTENT_LENGTH == NULL || p_CONTENT_LENGTH >= b->fill_ptr )
 		return 0;
@@ -72,7 +70,7 @@ _DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 	nret = deflateInit2( &stream , Z_DEFAULT_COMPRESSION , Z_DEFLATED , compress_algorithm , MAX_MEM_LEVEL , Z_DEFAULT_STRATEGY ) ;
 	if( nret != Z_OK )
 	{
-		return FASTERHTTP_ERROR_ZLIB_INIT;
+		return FASTERHTTP_ERROR_ZLIB__+nret;
 	}
 	
 	in_len = b->fill_ptr - body ;
@@ -88,12 +86,12 @@ _DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 	stream.avail_in = in_len ;
 	stream.next_out = out_base ;
 	stream.avail_out = out_len ;
-	nret = deflate( &stream , Z_NO_FLUSH ) ;
-	if( nret != Z_OK )
+	nret = deflate( &stream , Z_FINISH ) ;
+	if( nret != Z_OK && nret != Z_STREAM_END )
 	{
 		free( out_base );
 		deflateEnd( &stream );
-		return FASTERHTTP_ERROR_ZLIB___FLATE;
+		return FASTERHTTP_ERROR_ZLIB__+nret;
 	}
 	
 	new_buf_size = (body-b->base) + strlen(HTTP_HEADER_CONTENT_LENGTH)+2+10+2 + strlen(HTTP_HEADER_CONTENTENCODING)+2+10+2 + 10+2 + stream.total_out + 1 ;
@@ -143,9 +141,11 @@ _DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 	}
 	
 	free( out_base );
-	deflateEnd( &stream );
-printf( "leave CompressBuffer\n" );
-_DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
+	nret = deflateEnd( &stream ) ;
+	if( nret != Z_OK )
+	{
+		return FASTERHTTP_ERROR_ZLIB__+nret;
+	}
 	
 	return 0;
 }
@@ -201,7 +201,7 @@ int SendHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	return 0;
 }
 
-static int UncompressBuffer( struct HttpEnv *e , struct HttpBuffer *b , int compress_algorithm )
+static int UncompressBuffer( struct HttpEnv *e , struct HttpBuffer *b , char *p_compress_algorithm , int compress_algorithm_len , int compress_algorithm )
 {
 	uLong		in_len ;
 	uLong		out_len ;
@@ -212,8 +212,6 @@ static int UncompressBuffer( struct HttpEnv *e , struct HttpBuffer *b , int comp
 	
 	int		nret = 0 ;
 	
-printf( "enter UncompressBuffer\n" );
-_DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 	in_len = e->headers.content_length ;
 	out_len = in_len * 10 ;
 	out_base = (Bytef*)malloc( out_len+1 ) ;
@@ -231,7 +229,7 @@ _DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 	if( nret != Z_OK )
 	{
 		free( out_base );
-		return FASTERHTTP_ERROR_ZLIB_INIT;
+		return FASTERHTTP_ERROR_ZLIB__+nret;
 	}
 	
 	stream.next_in = (Bytef*)(e->body) ;
@@ -241,11 +239,11 @@ _DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 		stream.next_out = out_base + stream.total_out ;
 		stream.avail_out = out_len - stream.total_out ;
 		nret = inflate( &stream , Z_NO_FLUSH ) ;
-		if( nret != Z_OK )
+		if( nret != Z_OK && nret != Z_STREAM_END )
 		{
 			free( out_base );
 			inflateEnd( &stream );
-			return FASTERHTTP_ERROR_ZLIB___FLATE;
+			return FASTERHTTP_ERROR_ZLIB__+nret;
 		}
 		else
 		{
@@ -286,9 +284,11 @@ _DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 	e->headers.content_length = stream.total_out ;
 	
 	free( out_base );
-	inflateEnd( &stream );
-printf( "leave UncompressBuffer\n" );
-_DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
+	nret = inflateEnd( &stream ) ;
+	if( nret != Z_OK )
+	{
+		return FASTERHTTP_ERROR_ZLIB__+nret;
+	}
 	
 	return 0;
 }
@@ -307,11 +307,11 @@ static int UncompressHttpBody( struct HttpEnv *e , char *header )
 		{
 			if( compress_algorithm_len == 4 && STRNICMP( p_compress_algorithm , == , "gzip" , compress_algorithm_len ) )
 			{
-				return UncompressBuffer( e , GetHttpResponseBuffer(e) , HTTP_COMPRESSALGORITHM_GZIP ) ;
+				return UncompressBuffer( e , GetHttpResponseBuffer(e) , p_compress_algorithm , compress_algorithm_len , HTTP_COMPRESSALGORITHM_GZIP ) ;
 			}
 			else if( compress_algorithm_len == 7 && STRNICMP( p_compress_algorithm , == , "deflate" , compress_algorithm_len ) )
 			{
-				return UncompressBuffer( e , GetHttpResponseBuffer(e) , HTTP_COMPRESSALGORITHM_DEFLATE ) ;
+				return UncompressBuffer( e , GetHttpResponseBuffer(e) , p_compress_algorithm , compress_algorithm_len , HTTP_COMPRESSALGORITHM_DEFLATE ) ;
 			}
 		}
 	}
