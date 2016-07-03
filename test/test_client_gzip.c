@@ -40,7 +40,7 @@ int test_client_block()
 	b = GetHttpRequestBuffer(e) ;
 	nret = StrcatfHttpBuffer( b , "POST / HTTP/1.1\r\n"
 					"Content-Length: 3\r\n"
-					"Content-Encoding: gzip,deflate,*\r\n"
+					"Accept-Encoding: gzip2,deflate,*\r\n"
 					"\r\n"
 					"xyz" ) ;
 	if( nret )

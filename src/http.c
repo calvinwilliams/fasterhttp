@@ -10,7 +10,7 @@ static char *TokenHttpHeaderValue( char *str , char **pp_token , int *p_token_le
 {
 	char	*p = str ;
 	
-	while( (*p) == ' ' )
+	while( (*p) == ' ' || (*p) == ',' )
 		p++;
 	if( (*p) == '\r' || (*p) == '\n' || (*p) == '\0' )
 	{
@@ -35,7 +35,7 @@ static char *TokenHttpHeaderValue( char *str , char **pp_token , int *p_token_le
 	}
 }
 
-static int CompressHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b , char *p_compress_algorithm , int compress_algorithm_len , int compress_algorithm )
+static int CompressBuffer( struct HttpEnv *e , struct HttpBuffer *b , char *p_compress_algorithm , int compress_algorithm_len , int compress_algorithm )
 {
 	char		*p_CONTENT_LENGTH = NULL ;
 	char		*p_CONTENT_LENGTH_end = NULL ;
@@ -51,6 +51,8 @@ static int CompressHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b , char *
 	
 	int		nret = 0 ;
 	
+printf( "enter CompressBuffer\n" );
+_DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 	p_CONTENT_LENGTH = STRISTR( b->base , HTTP_HEADER_CONTENT_LENGTH ) ;
 	if( p_CONTENT_LENGTH == NULL || p_CONTENT_LENGTH >= b->fill_ptr )
 		return 0;
@@ -70,7 +72,7 @@ static int CompressHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b , char *
 	nret = deflateInit2( &stream , Z_DEFAULT_COMPRESSION , Z_DEFLATED , compress_algorithm , MAX_MEM_LEVEL , Z_DEFAULT_STRATEGY ) ;
 	if( nret != Z_OK )
 	{
-		return FASTERHTTP_ERROR_INTERNAL;
+		return FASTERHTTP_ERROR_ZLIB_INIT;
 	}
 	
 	in_len = b->fill_ptr - body ;
@@ -79,19 +81,19 @@ static int CompressHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b , char *
 	if( out_base == NULL )
 	{
 		deflateEnd( &stream );
-		return FASTERHTTP_ERROR_INTERNAL;
+		return FASTERHTTP_ERROR_ALLOC;
 	}
 	
 	stream.next_in = (Bytef*)body ;
 	stream.avail_in = in_len ;
 	stream.next_out = out_base ;
 	stream.avail_out = out_len ;
-	nret = deflate( &stream , Z_FINISH ) ;
+	nret = deflate( &stream , Z_NO_FLUSH ) ;
 	if( nret != Z_OK )
 	{
 		free( out_base );
 		deflateEnd( &stream );
-		return FASTERHTTP_ERROR_INTERNAL;
+		return FASTERHTTP_ERROR_ZLIB___FLATE;
 	}
 	
 	new_buf_size = (body-b->base) + strlen(HTTP_HEADER_CONTENT_LENGTH)+2+10+2 + strlen(HTTP_HEADER_CONTENTENCODING)+2+10+2 + 10+2 + stream.total_out + 1 ;
@@ -142,17 +144,19 @@ static int CompressHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b , char *
 	
 	free( out_base );
 	deflateEnd( &stream );
+printf( "leave CompressBuffer\n" );
+_DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 	
 	return 0;
 }
 
-static int CompressHttpResponse( struct HttpEnv *e )
+static int CompressHttpBody( struct HttpEnv *e , char *header )
 {
 	char	*base = NULL ;
 	char	*p_compress_algorithm = NULL ;
 	int	compress_algorithm_len ;
 	
-	base = GetHttpHeaderPtr( e , HTTP_HEADER_CONTENTENCODING , NULL ) ;
+	base = GetHttpHeaderPtr( e , header , NULL ) ;
 	while( base )
 	{
 		base = TokenHttpHeaderValue( base , & p_compress_algorithm , & compress_algorithm_len ) ;
@@ -160,11 +164,11 @@ static int CompressHttpResponse( struct HttpEnv *e )
 		{
 			if( compress_algorithm_len == 4 && STRNICMP( p_compress_algorithm , == , "gzip" , compress_algorithm_len ) )
 			{
-				return CompressHttpBuffer( e , GetHttpResponseBuffer(e) , p_compress_algorithm , compress_algorithm_len , HTTP_COMPRESSALGORITHM_GZIP ) ;
+				return CompressBuffer( e , GetHttpResponseBuffer(e) , p_compress_algorithm , compress_algorithm_len , HTTP_COMPRESSALGORITHM_GZIP ) ;
 			}
 			else if( compress_algorithm_len == 7 && STRNICMP( p_compress_algorithm , == , "deflate" , compress_algorithm_len ) )
 			{
-				return CompressHttpBuffer( e , GetHttpResponseBuffer(e) , p_compress_algorithm , compress_algorithm_len , HTTP_COMPRESSALGORITHM_DEFLATE ) ;
+				return CompressBuffer( e , GetHttpResponseBuffer(e) , p_compress_algorithm , compress_algorithm_len , HTTP_COMPRESSALGORITHM_DEFLATE ) ;
 			}
 		}
 	}
@@ -178,7 +182,7 @@ int SendHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	
 	if( e->enable_response_compressing == 1 )
 	{
-		nret = CompressHttpResponse( e ) ;
+		nret = CompressHttpBody( e , HTTP_HEADER_ACCEPTENCODING ) ;
 		if( nret )
 			return nret;
 		
@@ -197,7 +201,7 @@ int SendHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	return 0;
 }
 
-static int UncompressHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b , int compress_algorithm )
+static int UncompressBuffer( struct HttpEnv *e , struct HttpBuffer *b , int compress_algorithm )
 {
 	uLong		in_len ;
 	uLong		out_len ;
@@ -208,13 +212,14 @@ static int UncompressHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b , int 
 	
 	int		nret = 0 ;
 	
+printf( "enter UncompressBuffer\n" );
+_DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 	in_len = e->headers.content_length ;
-	//out_len = in_len * 10 ;
-	out_len = 10 ;
+	out_len = in_len * 10 ;
 	out_base = (Bytef*)malloc( out_len+1 ) ;
 	if( out_base == NULL )
 	{
-		return FASTERHTTP_ERROR_INTERNAL;
+		return FASTERHTTP_ERROR_ALLOC;
 	}
 	memset( out_base , 0x00 , out_len+1 );
 	
@@ -226,7 +231,7 @@ static int UncompressHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b , int 
 	if( nret != Z_OK )
 	{
 		free( out_base );
-		return FASTERHTTP_ERROR_INTERNAL;
+		return FASTERHTTP_ERROR_ZLIB_INIT;
 	}
 	
 	stream.next_in = (Bytef*)(e->body) ;
@@ -240,7 +245,7 @@ static int UncompressHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b , int 
 		{
 			free( out_base );
 			inflateEnd( &stream );
-			return FASTERHTTP_ERROR_INTERNAL;
+			return FASTERHTTP_ERROR_ZLIB___FLATE;
 		}
 		else
 		{
@@ -256,7 +261,7 @@ static int UncompressHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b , int 
 			{
 				free( out_base );
 				inflateEnd( &stream );
-				return FASTERHTTP_ERROR_INTERNAL;
+				return FASTERHTTP_ERROR_ALLOC;
 			}
 			memset( new_out_base + stream.total_out , 0x00 , new_out_len - stream.total_out );
 			out_len = new_out_len ;
@@ -282,17 +287,19 @@ static int UncompressHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b , int 
 	
 	free( out_base );
 	inflateEnd( &stream );
+printf( "leave UncompressBuffer\n" );
+_DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 	
 	return 0;
 }
 
-static int UncompressHttpResponse( struct HttpEnv *e )
+static int UncompressHttpBody( struct HttpEnv *e , char *header )
 {
 	char	*base = NULL ;
 	char	*p_compress_algorithm = NULL ;
 	int	compress_algorithm_len ;
 	
-	base = GetHttpHeaderPtr( e , HTTP_HEADER_CONTENTENCODING , NULL ) ;
+	base = GetHttpHeaderPtr( e , header , NULL ) ;
 	while( base )
 	{
 		base = TokenHttpHeaderValue( base , & p_compress_algorithm , & compress_algorithm_len ) ;
@@ -300,11 +307,11 @@ static int UncompressHttpResponse( struct HttpEnv *e )
 		{
 			if( compress_algorithm_len == 4 && STRNICMP( p_compress_algorithm , == , "gzip" , compress_algorithm_len ) )
 			{
-				return UncompressHttpBuffer( e , GetHttpResponseBuffer(e) , HTTP_COMPRESSALGORITHM_GZIP ) ;
+				return UncompressBuffer( e , GetHttpResponseBuffer(e) , HTTP_COMPRESSALGORITHM_GZIP ) ;
 			}
 			else if( compress_algorithm_len == 7 && STRNICMP( p_compress_algorithm , == , "deflate" , compress_algorithm_len ) )
 			{
-				return UncompressHttpBuffer( e , GetHttpResponseBuffer(e) , HTTP_COMPRESSALGORITHM_DEFLATE ) ;
+				return UncompressBuffer( e , GetHttpResponseBuffer(e) , HTTP_COMPRESSALGORITHM_DEFLATE ) ;
 			}
 		}
 	}
@@ -395,7 +402,7 @@ int ReceiveHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 		else if( nret )
 			return nret;
 		else
-			return UncompressHttpResponse(e);
+			return UncompressHttpBody( e , HTTP_HEADER_CONTENTENCODING );
 	}
 }
 
@@ -586,7 +593,7 @@ int ReceiveHttpResponseNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	else if( nret )
 		return nret;
 	else
-		return UncompressHttpResponse(e);
+		return UncompressHttpBody( e , HTTP_HEADER_CONTENTENCODING );
 }
 
 int ReceiveHttpResponseNonblock1( SOCKET sock , SSL *ssl , struct HttpEnv *e )
@@ -603,7 +610,7 @@ int ReceiveHttpResponseNonblock1( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	else if( nret )
 		return nret;
 	else
-		return UncompressHttpResponse(e);
+		return UncompressHttpBody( e , HTTP_HEADER_CONTENTENCODING );
 }
 
 int ReceiveHttpRequestNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
@@ -646,7 +653,7 @@ int SendHttpResponseNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	 
 	if( e->enable_response_compressing == 1 )
 	{
-		nret = CompressHttpResponse( e ) ;
+		nret = CompressHttpBody( e , HTTP_HEADER_ACCEPTENCODING ) ;
 		if( nret )
 			return nret;
 		
