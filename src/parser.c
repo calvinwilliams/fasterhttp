@@ -6,7 +6,7 @@
 #include "internal.h"
 #include "fasterhttp.h"
 
-#define DEBUG_PARSE	0
+#define DEBUG_PARSE	1
 
 int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 {
@@ -24,8 +24,10 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 	struct HttpHeader	*p_header = &(e->headers.header_array[e->headers.header_array_count]) ;
 	char			*fill_ptr = b->fill_ptr ;
 	
+	char			*p_version = &(e->headers.version) ;
 	int			*p_content_length = &(e->headers.content_length) ;
-	char			*p_transfer_encoding__chunked = & (e->headers.transfer_encoding__chunked) ;
+	char			*p_transfer_encoding__chunked = &(e->headers.transfer_encoding__chunked) ;
+	char			*p_connection__keepalive = &(e->headers.connection__keepalive) ;
 	
 #if DEBUG_PARSE
 	printf( "DEBUG_PARSE >>>>>>>>> ParseHttpBuffer - b->process_ptr[0x%02X...][%.*s]\n" , b->process_ptr[0] , (int)(b->fill_ptr-b->process_ptr) , b->process_ptr );
@@ -219,9 +221,9 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 					&& *(p2+6) == HTTP_VERSION_1_0[6] ) )
 				{
 					if( UNLIKELY( *(p2+7) == HTTP_VERSION_1_0[7] ) )
-						;
+						*(p_version) = HTTP_VERSION_1_0_N ;
 					else if( LIKELY( *(p2+7) == HTTP_VERSION_1_1[7] ) )
-						;
+						*(p_version) = HTTP_VERSION_1_1_N ;
 					else
 						return FASTERHTTP_ERROR_VERSION_NOT_SUPPORTED;
 				}
@@ -278,9 +280,9 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 					&& *(p2+6) == HTTP_VERSION_1_0[6] ) )
 				{
 					if( UNLIKELY( *(p2+7) == HTTP_VERSION_1_0[7] ) )
-						;
+						*(p_version) = HTTP_VERSION_1_0_N ;
 					else if( LIKELY( *(p2+7) == HTTP_VERSION_1_1[7] ) )
-						;
+						*(p_version) = HTTP_VERSION_1_1_N ;
 					else
 						return FASTERHTTP_ERROR_VERSION_NOT_SUPPORTED;
 				}
@@ -519,12 +521,23 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 				p_TRAILER->value_ptr = p_header->value_ptr ;
 				p_TRAILER->value_len = p_header->value_len ;
 			}
+			else if( UNLIKELY( p_header->name_len == sizeof(HTTP_HEADER_CONNECTION)-1 && STRNICMP( p_header->name_ptr , == , HTTP_HEADER_CONNECTION , sizeof(HTTP_HEADER_CONNECTION)-1 ) ) )
+			{
+				if( LIKELY( p_header->value_len == sizeof(HTTP_HEADER_CONNECTION__KEEPALIVE)-1 && STRNICMP( p_header->value_ptr , == , HTTP_HEADER_CONNECTION__KEEPALIVE , sizeof(HTTP_HEADER_CONNECTION__KEEPALIVE)-1 ) ) )
+					*(p_connection__keepalive) = 1 ;
+				else if( LIKELY( p_header->value_len == sizeof(HTTP_HEADER_CONNECTION__CLOSE)-1 && STRNICMP( p_header->value_ptr , == , HTTP_HEADER_CONNECTION__CLOSE , sizeof(HTTP_HEADER_CONNECTION__CLOSE)-1 ) ) )
+					*(p_connection__keepalive) = -1 ;
+				else
+					*(p_connection__keepalive) = 0 ;
+			}
 			e->headers.header_array_count++;
 			
 			if( *(p_transfer_encoding__chunked) == 1 && *(p_content_length) > 0 && UNLIKELY( p_header->name_len == p_TRAILER->value_len && STRNICMP( p_header->name_ptr , == , p_TRAILER->value_ptr , p_header->name_len ) ) )
 			{
-				b->process_ptr = fill_ptr ;
+				b->process_ptr = p ;
 				*(p_parse_step) = FASTERHTTP_PARSESTEP_DONE ;
+				if( b->fill_ptr > b->process_ptr )
+					e->reforming_flag = 1 ;
 				return 0;
 			}
 			
@@ -555,8 +568,11 @@ _GOTO_PARSESTEP_BODY :
 			
 			if( LIKELY( fill_ptr - e->body >= *(p_content_length) ) )
 			{
-				b->process_ptr = fill_ptr ;
+				b->process_ptr = e->body + *(p_content_length) ;
 				*(p_parse_step) = FASTERHTTP_PARSESTEP_DONE ;
+				if( b->fill_ptr > b->process_ptr )
+					e->reforming_flag = 1 ;
+printf( "e->reforming_flag[%d]\n" , e->reforming_flag );
 				return 0;
 			}
 			else
@@ -597,8 +613,10 @@ _GOTO_PARSESTEP_CHUNKED_SIZE :
 					goto _GOTO_PARSESTEP_HEADER_NAME0;
 				}
 				
-				b->process_ptr = fill_ptr ;
+				b->process_ptr = p ;
 				*(p_parse_step) = FASTERHTTP_PARSESTEP_DONE ;
+				if( b->fill_ptr > b->process_ptr )
+					e->reforming_flag = 1 ;
 				return 0;
 			}
 			

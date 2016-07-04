@@ -132,6 +132,8 @@ int main()
 #endif
 	int		nret = 0 ;
 	
+	setbuf( stdout , NULL );
+	
 #if ( defined _WIN32 )
 	nret = WSAStartup( MAKEWORD( 2, 2 ), &wsaData ) ;
 	if( nret )

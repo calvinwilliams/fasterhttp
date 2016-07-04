@@ -190,16 +190,17 @@ char *strcasestr(const char *haystack, const char *needle);
 #define FASTERHTTP_ERROR_TCP_SELECT_RECEIVE		(-HTTP_BAD_REQUEST*100)-31
 #define FASTERHTTP_ERROR_TCP_SELECT_RECEIVE_TIMEOUT	(-HTTP_REQUEST_TIMEOUT*100)-32
 #define FASTERHTTP_ERROR_TCP_RECEIVE			(-HTTP_BAD_REQUEST*100)-33
-#define FASTERHTTP_INFO_TCP_SEND_WOULDBLOCK		40
+#define FASTERHTTP_INFO_TCP_SEND_WOULDBLOCK		10
 #define FASTERHTTP_ERROR_TCP_SELECT_SEND		(-HTTP_BAD_REQUEST*100)-41
 #define FASTERHTTP_ERROR_TCP_SELECT_SEND_TIMEOUT	(-HTTP_REQUEST_TIMEOUT*100)-42
 #define FASTERHTTP_ERROR_TCP_SEND			(-HTTP_BAD_REQUEST*100)-43
+#define FASTERHTTP_ERROR_TCP_CLOSE			-200
+#define FASTERHTTP_INFO_TCP_CLOSE			200
 #define FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER		100
 #define FASTERHTTP_ERROR_METHOD_INVALID			(-HTTP_NOT_IMPLEMENTED*100)
 #define FASTERHTTP_ERROR_VERSION_NOT_SUPPORTED		(-HTTP_HTTP_VERSION_NOT_SUPPORTED*100)
 #define FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID	(-HTTP_BAD_REQUEST*100)-51
 #define FASTERHTTP_ERROR_HTTP_HEADER_INVALID		(-HTTP_BAD_REQUEST*100)-52
-#define FASTERHTTP_ERROR_HTTP_TRUNCATION		(-HTTP_BAD_REQUEST*100)-53
 #define FASTERHTTP_ERROR_ZLIB__				(-HTTP_INTERNAL_SERVER_ERROR*100)
 
 #define FASTERHTTP_TIMEOUT_DEFAULT			60
@@ -254,6 +255,8 @@ char *strcasestr(const char *haystack, const char *needle);
 
 #define HTTP_VERSION_1_0				"HTTP/1.0"
 #define HTTP_VERSION_1_1				"HTTP/1.1"
+#define HTTP_VERSION_1_0_N				10
+#define HTTP_VERSION_1_1_N				11
 
 #define HTTP_HEADER_CONTENT_LENGTH			"Content-Length"
 #define HTTP_HEADER_TRANSFERENCODING			"Transfer-Encoding"
@@ -261,6 +264,9 @@ char *strcasestr(const char *haystack, const char *needle);
 #define HTTP_HEADER_TRAILER				"Trailer"
 #define HTTP_HEADER_CONTENTENCODING			"Content-Encoding"
 #define HTTP_HEADER_ACCEPTENCODING			"Accept-Encoding"
+#define HTTP_HEADER_CONNECTION				"Connection"
+#define HTTP_HEADER_CONNECTION__KEEPALIVE		"Keep-Alive"
+#define HTTP_HEADER_CONNECTION__CLOSE			"Close"
 
 #define HTTP_COMPRESSALGORITHM_GZIP			MAX_WBITS+16
 #define HTTP_COMPRESSALGORITHM_DEFLATE			MAX_WBITS
@@ -288,8 +294,8 @@ _WINDLL_FUNC char *GetHttpBufferFillPtr( struct HttpBuffer *b );
 _WINDLL_FUNC int GetHttpBufferRemainLength( struct HttpBuffer *b );
 _WINDLL_FUNC void OffsetHttpBufferFillPtr( struct HttpBuffer *b , int len );
 
-_WINDLL_FUNC void CleanHttpBuffer( struct HttpBuffer *b );
 _WINDLL_FUNC int ReallocHttpBuffer( struct HttpBuffer *b , long new_buf_size );
+
 _WINDLL_FUNC int StrcpyHttpBuffer( struct HttpBuffer *b , char *str );
 _WINDLL_FUNC int StrcpyfHttpBuffer( struct HttpBuffer *b , char *format , ... );
 _WINDLL_FUNC int StrcpyvHttpBuffer( struct HttpBuffer *b , char *format , va_list valist );
@@ -297,6 +303,7 @@ _WINDLL_FUNC int StrcatHttpBuffer( struct HttpBuffer *b , char *str );
 _WINDLL_FUNC int StrcatfHttpBuffer( struct HttpBuffer *b , char *format , ... );
 _WINDLL_FUNC int StrcatvHttpBuffer( struct HttpBuffer *b , char *format , va_list valist );
 _WINDLL_FUNC int MemcatHttpBuffer( struct HttpBuffer *b , char *base , long len );
+
 _WINDLL_FUNC void SetHttpBufferPtr( struct HttpBuffer *b , char *ptr , long len );
 
 /* http client advance api */
