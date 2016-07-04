@@ -338,9 +338,16 @@ int ResponseHttp( SOCKET sock , SSL *ssl , struct HttpEnv *e , funcProcessHttpRe
 {
 	int		nret = 0 ;
 	
+_GOTO_KEEPALIVE :
+	
 	nret = ReceiveHttpRequest( sock , ssl , e ) ;
 	if( nret )
+	{
+		if( nret == FASTERHTTP_INFO_TCP_CLOSE )
+			return 0;
+		
 		goto _GOTO_ON_ERROR;
+	}
 	
 	nret = pfuncProcessHttpRequest( e , p ) ;
 	if( nret )
@@ -352,6 +359,15 @@ int ResponseHttp( SOCKET sock , SSL *ssl , struct HttpEnv *e , funcProcessHttpRe
 	nret = SendHttpResponse( sock , ssl , e ) ;
 	if( nret )
 		return nret;
+	
+	if(	( e->headers.version == HTTP_VERSION_1_0_N && e->headers.connection__keepalive == 1 )
+		||
+		( e->headers.version == HTTP_VERSION_1_1_N && e->headers.connection__keepalive != -1 )
+	)
+	{
+		ResetHttpEnv( e );
+		goto _GOTO_KEEPALIVE;
+	}
 	
 _GOTO_ON_ERROR :
 	
@@ -413,7 +429,17 @@ int ReceiveHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	while(1)
 	{
 		nret = ReceiveHttpBuffer( sock , ssl , e , &(e->request_buffer) ) ;
-		if( nret )
+		if(	nret == FASTERHTTP_ERROR_TCP_CLOSE
+			&&
+			(	( e->headers.version == HTTP_VERSION_1_0_N && e->headers.connection__keepalive == 1 )
+				||
+				( e->headers.version == HTTP_VERSION_1_1_N && e->headers.connection__keepalive != -1 )
+			)
+			&&
+			e->request_buffer.fill_ptr == e->request_buffer.base
+		)
+			return FASTERHTTP_INFO_TCP_CLOSE;
+		else if( nret )
 			return nret;
 		
 		nret = ParseHttpBuffer( e , &(e->request_buffer) ) ;
@@ -618,7 +644,17 @@ int ReceiveHttpRequestNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	int		nret = 0 ;
 	
 	nret = ReceiveHttpBuffer( sock , ssl , e , &(e->request_buffer) ) ;
-	if( nret )
+	if(	nret == FASTERHTTP_ERROR_TCP_CLOSE
+		&&
+		(	( e->headers.version == HTTP_VERSION_1_0_N && e->headers.connection__keepalive == 1 )
+			||
+			( e->headers.version == HTTP_VERSION_1_1_N && e->headers.connection__keepalive != -1 )
+		)
+		&&
+		e->request_buffer.fill_ptr == e->request_buffer.base
+	)
+		return FASTERHTTP_INFO_TCP_CLOSE;
+	else if( nret )
 		return nret;
 	
 	nret = ParseHttpBuffer( e , &(e->request_buffer) ) ;
@@ -635,7 +671,17 @@ int ReceiveHttpRequestNonblock1( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	int		nret = 0 ;
 	
 	nret = ReceiveHttpBuffer1( sock , ssl , e , &(e->request_buffer) ) ;
-	if( nret )
+	if(	nret == FASTERHTTP_ERROR_TCP_CLOSE
+		&&
+		(	( e->headers.version == HTTP_VERSION_1_0_N && e->headers.connection__keepalive == 1 )
+			||
+			( e->headers.version == HTTP_VERSION_1_1_N && e->headers.connection__keepalive != -1 )
+		)
+		&&
+		e->request_buffer.fill_ptr == e->request_buffer.base
+	)
+		return FASTERHTTP_INFO_TCP_CLOSE;
+	else 	if( nret )
 		return nret;
 	
 	nret = ParseHttpBuffer( e , &(e->request_buffer) ) ;
@@ -675,7 +721,7 @@ int ParseHttpResponse( struct HttpEnv *e )
 	
 	nret = ParseHttpBuffer( e , &(e->response_buffer) ) ;
 	if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
-		return FASTERHTTP_ERROR_HTTP_TRUNCATION;
+		return FASTERHTTP_ERROR_TCP_CLOSE;
 	else if( nret )
 		return nret;
 	
@@ -688,7 +734,7 @@ int ParseHttpRequest( struct HttpEnv *e )
 	
 	nret = ParseHttpBuffer( e , &(e->request_buffer) ) ;
 	if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
-		return FASTERHTTP_ERROR_HTTP_TRUNCATION;
+		return FASTERHTTP_ERROR_TCP_CLOSE;
 	else if( nret )
 		return nret;
 	

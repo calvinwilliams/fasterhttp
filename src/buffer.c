@@ -48,6 +48,9 @@ void ReformingHttpBuffer( struct HttpBuffer *b )
 	memmove( b->base , b->process_ptr , len );
 	b->process_ptr = b->base ;
 	b->fill_ptr = b->base + len ;
+printf( "ReformingHttpBuffer\n" );
+_DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
+	
 	return;
 }
 

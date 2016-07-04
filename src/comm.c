@@ -29,7 +29,7 @@ int SendHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpBuff
 {
 	struct timeval	t1 , t2 ;
 	fd_set		write_fds ;
-	long		len ;
+	int		len ;
 	int		nret = 0 ;
 	
 	if( b->process_ptr >= b->fill_ptr )
@@ -55,12 +55,17 @@ int SendHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpBuff
 	}
 	
 	if( ssl == NULL )
-		len = send( sock , b->process_ptr , b->fill_ptr-b->process_ptr , 0 ) ;
+		len = (int)send( sock , b->process_ptr , b->fill_ptr-b->process_ptr , 0 ) ;
 	else
-		len = SSL_write( ssl , b->process_ptr , b->fill_ptr-b->process_ptr ) ;
+		len = (int)SSL_write( ssl , b->process_ptr , b->fill_ptr-b->process_ptr ) ;
 	if( len == -1 )
+	{
 		return FASTERHTTP_ERROR_TCP_SEND;
+	}
 	
+printf( "send\n" );
+_DumpHexBuffer( stdout , b->process_ptr , len );
+
 #if ( defined _WIN32 )
 	time( &(t2.tv_sec) );
 #elif ( defined __unix ) || ( defined __linux__ )
@@ -80,7 +85,7 @@ int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpB
 {
 	struct timeval	t1 , t2 ;
 	fd_set		read_fds ;
-	long		len ;
+	int		len ;
 	int		nret = 0 ;
 	
 	if( b->process_ptr == b->base && b->process_ptr < b->fill_ptr )
@@ -113,14 +118,21 @@ int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpB
 	}
 	
 	if( ssl == NULL )
-		len = (long)recv( sock , b->fill_ptr , b->buf_size-1 - (b->fill_ptr-b->base) , 0 ) ;
+		len = (int)recv( sock , b->fill_ptr , b->buf_size-1 - (b->fill_ptr-b->base) , 0 ) ;
 	else
-		len = (long)SSL_read( ssl , b->fill_ptr , b->buf_size-1 - (b->fill_ptr-b->base) ) ;
+		len = (int)SSL_read( ssl , b->fill_ptr , b->buf_size-1 - (b->fill_ptr-b->base) ) ;
 	if( len == -1 )
+	{
 		return FASTERHTTP_ERROR_TCP_RECEIVE;
+	}
 	else if( len == 0 )
-		return FASTERHTTP_ERROR_HTTP_TRUNCATION;
+	{
+		return FASTERHTTP_ERROR_TCP_CLOSE;
+	}
 	
+printf( "recv\n" );
+_DumpHexBuffer( stdout , b->fill_ptr , len );
+
 #if ( defined _WIN32 )
 	time( &(t2.tv_sec) );
 #elif ( defined __unix ) || ( defined __linux__ )
@@ -173,7 +185,7 @@ int ReceiveHttpBuffer1( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct Http
 	if( len == -1 )
 		return FASTERHTTP_ERROR_TCP_RECEIVE;
 	else if( len == 0 )
-		return FASTERHTTP_ERROR_HTTP_TRUNCATION;
+		return FASTERHTTP_ERROR_TCP_CLOSE;
 	
 #if ( defined _WIN32 )
 	time( &(t2.tv_sec) );

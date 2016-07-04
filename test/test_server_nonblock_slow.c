@@ -119,13 +119,13 @@ int test_server_nonblock_slow_slow()
 			if( nret == 0 )
 			{
 				printf( "select receive timeout , errno[%d]\n" , errno );
-				nret = FASTERHTTP_ERROR_HTTP_TRUNCATION ;
+				nret = FASTERHTTP_ERROR_TCP_CLOSE ;
 				break;
 			}
 			else if( nret != 1 )
 			{
 				printf( "select receive failed , errno[%d]\n" , errno );
-				nret = FASTERHTTP_ERROR_HTTP_TRUNCATION ;
+				nret = FASTERHTTP_ERROR_TCP_CLOSE ;
 				break;
 			}
 			
@@ -145,7 +145,12 @@ int test_server_nonblock_slow_slow()
 			}
 		}
 		
-		if( nret )
+		if( nret == FASTERHTTP_INFO_TCP_CLOSE )
+		{
+			CLOSESOCKET( accept_sock );
+			continue;
+		}
+		else if( nret )
 		{
 			nret = FormatHttpResponseStartLine( abs(nret)/1000 , e ) ;
 			if( nret )

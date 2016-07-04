@@ -34,6 +34,8 @@ struct HttpHeaders
 	struct HttpHeader	METHOD ;
 	struct HttpHeader	URI ;
 	struct HttpHeader	VERSION ;
+	char			version ;	/* 1.0 -> 10 */
+						/* 1.1 -> 11 */
 	
 	struct HttpHeader	STATUSCODE ;
 	struct HttpHeader	REASONPHRASE ;
@@ -42,6 +44,9 @@ struct HttpHeaders
 	
 	char			transfer_encoding__chunked ;
 	struct HttpHeader	TRAILER ;
+	
+	struct HttpHeader	CONNECTION ;
+	char			connection__keepalive ;
 	
 	struct HttpHeader	*header_array ;
 	int			header_array_size ;
