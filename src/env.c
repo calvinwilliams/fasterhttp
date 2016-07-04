@@ -64,6 +64,7 @@ struct HttpEnv *CreateHttpEnv()
 void ResetHttpEnv( struct HttpEnv *e )
 {
 	struct HttpHeaders	*p_headers = &(e->headers) ;
+	struct HttpBuffer	*b = NULL ;
 	
 	/* struct HttpEnv */
 	
@@ -71,12 +72,31 @@ void ResetHttpEnv( struct HttpEnv *e )
 	if( e->enable_response_compressing == 2 )
 		e->enable_response_compressing = 1 ;
 	
-	if( UNLIKELY( e->request_buffer.ref_flag == 0 && e->request_buffer.buf_size > FASTERHTTP_REQUEST_BUFSIZE_MAX ) )
-		ReallocHttpBuffer( &(e->request_buffer) , FASTERHTTP_REQUEST_BUFSIZE_DEFAULT );
-	CleanHttpBuffer( &(e->request_buffer) );
-	if( UNLIKELY( e->response_buffer.ref_flag == 0 && e->response_buffer.buf_size > FASTERHTTP_RESPONSE_BUFSIZE_MAX ) )
-		ReallocHttpBuffer( &(e->response_buffer) , FASTERHTTP_RESPONSE_BUFSIZE_DEFAULT );
-	CleanHttpBuffer( &(e->response_buffer) );
+	b = &(e->request_buffer) ;
+	if( b->ref_flag == 0 && UNLIKELY( b->process_ptr < b->fill_ptr ) && e->reforming_flag == 1 )
+	{
+		ReformingHttpBuffer( b );
+		e->reforming_flag = 0 ;
+	}
+	else
+	{
+		CleanHttpBuffer( b );
+	}
+	if( UNLIKELY( b->ref_flag == 0 && b->buf_size > FASTERHTTP_REQUEST_BUFSIZE_MAX && b->fill_ptr-b->process_ptr<FASTERHTTP_REQUEST_BUFSIZE_MAX ) )
+		ReallocHttpBuffer( b , FASTERHTTP_REQUEST_BUFSIZE_DEFAULT );
+	
+	b = &(e->response_buffer) ;
+	if( b->ref_flag == 0 && UNLIKELY( b->process_ptr < b->fill_ptr ) && e->reforming_flag == 1 )
+	{
+		ReformingHttpBuffer( b );
+		e->reforming_flag = 0 ;
+	}
+	else
+	{
+		CleanHttpBuffer( b );
+	}
+	if( UNLIKELY( b->ref_flag == 0 && b->buf_size > FASTERHTTP_RESPONSE_BUFSIZE_MAX ) )
+		ReallocHttpBuffer( b , FASTERHTTP_RESPONSE_BUFSIZE_DEFAULT );
 	
 	e->parse_step = FASTERHTTP_PARSESTEP_BEGIN ;
 	

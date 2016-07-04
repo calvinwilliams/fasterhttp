@@ -19,6 +19,7 @@ c_FILE		=	\
 			test_server_nonblock_slow.c \
 			test_client_gzip.c \
 			test_server_gzip.c \
+			test_client_stickrequests.c \
 			press.c \
 
 ###### 目标文件、安装目录配置区
@@ -34,6 +35,7 @@ BIN		=	test_demo \
 			test_server_nonblock_slow \
 			test_client_gzip \
 			test_server_gzip \
+			test_client_stickrequests \
 			press \
 
 ###### 编译选项
@@ -90,6 +92,9 @@ test_client_gzip	:	test_client_gzip.o
 
 test_server_gzip	:	test_server_gzip.o
 	$(CC) -o $@ test_server_gzip.o $(LFLAGS)
+
+test_client_stickrequests:	test_client_stickrequests.o
+	$(CC) -o $@ test_client_stickrequests.o $(LFLAGS)
 
 press			:	press.o
 	$(CC) -o $@ press.o $(LFLAGS)

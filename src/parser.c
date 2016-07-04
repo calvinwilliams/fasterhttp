@@ -553,10 +553,12 @@ _GOTO_PARSESTEP_BODY :
 			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_BODY\n" );
 #endif
 			
-			if( LIKELY( fill_ptr - e->body >= *(p_content_length) ) )
+			if( LIKELY( fill_ptr - e->body == *(p_content_length) ) )
 			{
 				b->process_ptr = fill_ptr ;
 				*(p_parse_step) = FASTERHTTP_PARSESTEP_DONE ;
+				if( b->fill_ptr > b->process_ptr )
+					e->reforming_flag = 1 ;
 				return 0;
 			}
 			else
@@ -599,6 +601,8 @@ _GOTO_PARSESTEP_CHUNKED_SIZE :
 				
 				b->process_ptr = fill_ptr ;
 				*(p_parse_step) = FASTERHTTP_PARSESTEP_DONE ;
+				if( b->fill_ptr > b->process_ptr )
+					e->reforming_flag = 1 ;
 				return 0;
 			}
 			

@@ -288,8 +288,8 @@ _WINDLL_FUNC char *GetHttpBufferFillPtr( struct HttpBuffer *b );
 _WINDLL_FUNC int GetHttpBufferRemainLength( struct HttpBuffer *b );
 _WINDLL_FUNC void OffsetHttpBufferFillPtr( struct HttpBuffer *b , int len );
 
-_WINDLL_FUNC void CleanHttpBuffer( struct HttpBuffer *b );
 _WINDLL_FUNC int ReallocHttpBuffer( struct HttpBuffer *b , long new_buf_size );
+
 _WINDLL_FUNC int StrcpyHttpBuffer( struct HttpBuffer *b , char *str );
 _WINDLL_FUNC int StrcpyfHttpBuffer( struct HttpBuffer *b , char *format , ... );
 _WINDLL_FUNC int StrcpyvHttpBuffer( struct HttpBuffer *b , char *format , va_list valist );
@@ -297,6 +297,7 @@ _WINDLL_FUNC int StrcatHttpBuffer( struct HttpBuffer *b , char *str );
 _WINDLL_FUNC int StrcatfHttpBuffer( struct HttpBuffer *b , char *format , ... );
 _WINDLL_FUNC int StrcatvHttpBuffer( struct HttpBuffer *b , char *format , va_list valist );
 _WINDLL_FUNC int MemcatHttpBuffer( struct HttpBuffer *b , char *base , long len );
+
 _WINDLL_FUNC void SetHttpBufferPtr( struct HttpBuffer *b , char *ptr , long len );
 
 /* http client advance api */

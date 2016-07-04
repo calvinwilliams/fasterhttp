@@ -42,9 +42,17 @@ void OffsetHttpBufferFillPtr( struct HttpBuffer *b , int len )
 	return;
 }
 
+void ReformingHttpBuffer( struct HttpBuffer *b )
+{
+	int	len = b->fill_ptr - b->process_ptr ;
+	memmove( b->base , b->process_ptr , len );
+	b->process_ptr = b->base ;
+	b->fill_ptr = b->base + len ;
+	return;
+}
+
 void CleanHttpBuffer( struct HttpBuffer *b )
 {
-	b->base[b->buf_size-1] = '\0' ;
 	b->fill_ptr = b->base ;
 	b->process_ptr = b->base ;
 	

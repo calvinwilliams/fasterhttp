@@ -52,6 +52,7 @@ struct HttpEnv
 {
 	struct timeval		timeout ;
 	char			enable_response_compressing ;
+	char			reforming_flag ;
 	
 	struct HttpBuffer	request_buffer ;
 	struct HttpBuffer	response_buffer ;
@@ -66,6 +67,9 @@ struct HttpEnv
 	int			chunked_length ;
 	int			chunked_length_length ;
 } ;
+
+void ReformingHttpBuffer( struct HttpBuffer *b );
+void CleanHttpBuffer( struct HttpBuffer *b );
 
 int SendHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpBuffer *b );
 int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpBuffer *b );

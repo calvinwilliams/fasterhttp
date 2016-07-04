@@ -83,6 +83,9 @@ int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpB
 	long		len ;
 	int		nret = 0 ;
 	
+	if( b->process_ptr == b->base && b->process_ptr < b->fill_ptr )
+		return 0;
+	
 	while( (b->fill_ptr-b->base) >= b->buf_size-1 )
 	{
 		nret = ReallocHttpBuffer( b , -1 ) ;
