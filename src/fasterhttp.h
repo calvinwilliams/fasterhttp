@@ -294,8 +294,6 @@ _WINDLL_FUNC char *GetHttpBufferFillPtr( struct HttpBuffer *b );
 _WINDLL_FUNC int GetHttpBufferRemainLength( struct HttpBuffer *b );
 _WINDLL_FUNC void OffsetHttpBufferFillPtr( struct HttpBuffer *b , int len );
 
-_WINDLL_FUNC int ReallocHttpBuffer( struct HttpBuffer *b , long new_buf_size );
-
 _WINDLL_FUNC int StrcpyHttpBuffer( struct HttpBuffer *b , char *str );
 _WINDLL_FUNC int StrcpyfHttpBuffer( struct HttpBuffer *b , char *format , ... );
 _WINDLL_FUNC int StrcpyvHttpBuffer( struct HttpBuffer *b , char *format , va_list valist );
@@ -335,7 +333,7 @@ _WINDLL_FUNC int SendHttpResponseNonblock( SOCKET sock , SSL *ssl , struct HttpE
 _WINDLL_FUNC int ParseHttpResponse( struct HttpEnv *e );
 _WINDLL_FUNC int ParseHttpRequest( struct HttpEnv *e );
 
-/* http data */
+/* http header and body */
 _WINDLL_FUNC char *GetHttpHeaderPtr_METHOD( struct HttpEnv *e , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderLen_METHOD( struct HttpEnv *e );
 _WINDLL_FUNC char *GetHttpHeaderPtr_URI( struct HttpEnv *e , int *p_value_len );

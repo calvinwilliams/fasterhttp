@@ -73,6 +73,7 @@ struct HttpEnv
 	int			chunked_length_length ;
 } ;
 
+int ReallocHttpBuffer( struct HttpBuffer *b , long new_buf_size );
 void ReformingHttpBuffer( struct HttpBuffer *b );
 void CleanHttpBuffer( struct HttpBuffer *b );
 
