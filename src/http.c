@@ -360,10 +360,7 @@ _GOTO_KEEPALIVE :
 	if( nret )
 		return nret;
 	
-	if(	( e->headers.version == HTTP_VERSION_1_0_N && e->headers.connection__keepalive == 1 )
-		||
-		( e->headers.version == HTTP_VERSION_1_1_N && e->headers.connection__keepalive != -1 )
-	)
+	if( CheckHttpKeepAlive(e) )
 	{
 		ResetHttpEnv( e );
 		goto _GOTO_KEEPALIVE;
@@ -711,6 +708,17 @@ int SendHttpResponseNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 		return FASTERHTTP_INFO_TCP_SEND_WOULDBLOCK; 
 	else if( nret )
 		return nret;
+	else
+		return 0;
+}
+
+int CheckHttpKeepAlive( struct HttpEnv *e )
+{
+	if(	( e->headers.version == HTTP_VERSION_1_0_N && e->headers.connection__keepalive == 1 )
+		||
+		( e->headers.version == HTTP_VERSION_1_1_N && e->headers.connection__keepalive != -1 )
+	)
+		return 1;
 	else
 		return 0;
 }

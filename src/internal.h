@@ -71,6 +71,9 @@ struct HttpEnv
 	char			*chunked_body_end ;
 	int			chunked_length ;
 	int			chunked_length_length ;
+	
+	int			i ;
+	void			*ptr ;
 } ;
 
 int ReallocHttpBuffer( struct HttpBuffer *b , long new_buf_size );

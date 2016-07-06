@@ -181,3 +181,25 @@ void EnableHttpResponseCompressing( struct HttpEnv *e , char enable_response_com
 	return;
 }
 
+void SetParserCustomIntData( struct HttpEnv *e , int i )
+{
+	e->i = i ;
+	return;
+}
+
+void SetParserCustomPtrData( struct HttpEnv *e , void *ptr )
+{
+	e->ptr = ptr ;
+	return;
+}
+
+int GetParserCustomIntData( struct HttpEnv *e )
+{
+	return e->i;
+}
+
+void *GetParserCustomPtrData( struct HttpEnv *e )
+{
+	return e->ptr;
+}
+

@@ -187,6 +187,7 @@ char *strcasestr(const char *haystack, const char *needle);
 #define FASTERHTTP_ERROR_PARAMTER			(-HTTP_INTERNAL_SERVER_ERROR*100)-12
 #define FASTERHTTP_ERROR_USING				(-HTTP_INTERNAL_SERVER_ERROR*100)-13
 #define FASTERHTTP_ERROR_INTERNAL			(-HTTP_INTERNAL_SERVER_ERROR*100)-14
+#define FASTERHTTP_ERROR_FILE_NOT_FOUND			(-HTTP_NOT_FOUND*100)
 #define FASTERHTTP_ERROR_TCP_SELECT_RECEIVE		(-HTTP_BAD_REQUEST*100)-31
 #define FASTERHTTP_ERROR_TCP_SELECT_RECEIVE_TIMEOUT	(-HTTP_REQUEST_TIMEOUT*100)-32
 #define FASTERHTTP_ERROR_TCP_RECEIVE			(-HTTP_BAD_REQUEST*100)-33
@@ -284,6 +285,11 @@ _WINDLL_FUNC void SetHttpTimeout( struct HttpEnv *e , long timeout );
 _WINDLL_FUNC struct timeval *GetHttpElapse( struct HttpEnv *e );
 _WINDLL_FUNC void EnableHttpResponseCompressing( struct HttpEnv *e , char enable_response_compressing );
 
+_WINDLL_FUNC void SetParserCustomIntData( struct HttpEnv *e , int i );
+_WINDLL_FUNC void SetParserCustomPtrData( struct HttpEnv *e , void *ptr );
+_WINDLL_FUNC int GetParserCustomIntData( struct HttpEnv *e );
+_WINDLL_FUNC void *GetParserCustomPtrData( struct HttpEnv *e );
+
 /* buffer operations */
 _WINDLL_FUNC struct HttpBuffer *GetHttpRequestBuffer( struct HttpEnv *e );
 _WINDLL_FUNC struct HttpBuffer *GetHttpResponseBuffer( struct HttpEnv *e );
@@ -301,6 +307,8 @@ _WINDLL_FUNC int StrcatHttpBuffer( struct HttpBuffer *b , char *str );
 _WINDLL_FUNC int StrcatfHttpBuffer( struct HttpBuffer *b , char *format , ... );
 _WINDLL_FUNC int StrcatvHttpBuffer( struct HttpBuffer *b , char *format , va_list valist );
 _WINDLL_FUNC int MemcatHttpBuffer( struct HttpBuffer *b , char *base , long len );
+
+_WINDLL_FUNC int StrcatHttpBufferFromFile( struct HttpBuffer *b , char *pathfilename , int *p_filesize );
 
 _WINDLL_FUNC void SetHttpBufferPtr( struct HttpBuffer *b , char *ptr , long len );
 
@@ -320,6 +328,7 @@ _WINDLL_FUNC int ReceiveHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e 
 _WINDLL_FUNC int FormatHttpResponseStartLine( int status_code , struct HttpEnv *e );
 _WINDLL_FUNC int FormatHttpResponseLength( struct HttpEnv *e );
 _WINDLL_FUNC int SendHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e );
+_WINDLL_FUNC int CheckHttpKeepAlive( struct HttpEnv *e );
 
 /* http client api with nonblock */
 _WINDLL_FUNC int SendHttpRequestNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e );

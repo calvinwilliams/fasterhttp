@@ -48,8 +48,6 @@ void ReformingHttpBuffer( struct HttpBuffer *b )
 	memmove( b->base , b->process_ptr , len );
 	b->process_ptr = b->base ;
 	b->fill_ptr = b->base + len ;
-printf( "ReformingHttpBuffer\n" );
-_DumpHexBuffer( stdout , b->base , b->fill_ptr-b->base );
 	
 	return;
 }
@@ -94,10 +92,14 @@ int StrcpyHttpBuffer( struct HttpBuffer *b , char *str )
 {
 	int		len ;
 	
+	int		nret = 0 ;
+	
 	len = strlen(str) ;
 	while( len > b->buf_size-1 )
 	{
-		ReallocHttpBuffer( b , -1 );
+		nret = ReallocHttpBuffer( b , -1 ) ;
+		if( nret )
+			return nret;
 	}
 	
 	memcpy( b->base , str , len );
@@ -111,6 +113,8 @@ int StrcpyfHttpBuffer( struct HttpBuffer *b , char *format , ... )
 	va_list		valist ;
 	int		len ;
 	
+	int		nret = 0 ;
+	
 	while(1)
 	{
 		va_start( valist , format );
@@ -118,7 +122,9 @@ int StrcpyfHttpBuffer( struct HttpBuffer *b , char *format , ... )
 		va_end( valist );
 		if( len == -1 || len == b->buf_size-1 )
 		{
-			ReallocHttpBuffer( b , -1 );
+			nret = ReallocHttpBuffer( b , -1 ) ;
+			if( nret )
+				return nret;
 		}
 		else
 		{
@@ -134,12 +140,16 @@ int StrcpyvHttpBuffer( struct HttpBuffer *b , char *format , va_list valist )
 {
 	int		len ;
 	
+	int		nret = 0 ;
+	
 	while(1)
 	{
 		len = VSNPRINTF( b->base , b->buf_size-1 , format , valist ) ;
 		if( len == -1 || len == b->buf_size-1 )
 		{
-			ReallocHttpBuffer( b , -1 );
+			nret = ReallocHttpBuffer( b , -1 ) ;
+			if( nret )
+				return nret;
 		}
 		else
 		{
@@ -155,10 +165,14 @@ int StrcatHttpBuffer( struct HttpBuffer *b , char *str )
 {
 	long		len ;
 	
+	int		nret = 0 ;
+	
 	len = strlen(str) ;
 	while( (b->fill_ptr-b->base) + len > b->buf_size-1 )
 	{
-		ReallocHttpBuffer( b , -1 );
+		nret = ReallocHttpBuffer( b , -1 ) ;
+		if( nret )
+			return nret;
 	}
 	
 	memcpy( b->fill_ptr , str , len );
@@ -172,6 +186,8 @@ int StrcatfHttpBuffer( struct HttpBuffer *b , char *format , ... )
 	va_list		valist ;
 	long		len ;
 	
+	int		nret = 0 ;
+	
 	while(1)
 	{
 		va_start( valist , format );
@@ -179,7 +195,9 @@ int StrcatfHttpBuffer( struct HttpBuffer *b , char *format , ... )
 		va_end( valist );
 		if( len == -1 || len == b->buf_size-1 - (b->fill_ptr-b->base) )
 		{
-			ReallocHttpBuffer( b , -1 );
+			nret = ReallocHttpBuffer( b , -1 ) ;
+			if( nret )
+				return nret;
 		}
 		else
 		{
@@ -195,12 +213,16 @@ int StrcatvHttpBuffer( struct HttpBuffer *b , char *format , va_list valist )
 {
 	int		len ;
 	
+	int		nret = 0 ;
+	
 	while(1)
 	{
 		len = VSNPRINTF( b->fill_ptr , b->buf_size-1 - (b->fill_ptr-b->base) , format , valist ) ;
 		if( len == -1 || len == b->buf_size-1 - (b->fill_ptr-b->base) )
 		{
-			ReallocHttpBuffer( b , -1 );
+			nret = ReallocHttpBuffer( b , -1 ) ;
+			if( nret )
+				return nret;
 		}
 		else
 		{
@@ -212,11 +234,65 @@ int StrcatvHttpBuffer( struct HttpBuffer *b , char *format , va_list valist )
 	return 0;
 }
 
+int StrcatHttpBufferFromFile( struct HttpBuffer *b , char *pathfilename , int *p_filesize )
+{
+	int		filesize = -1 ;
+	int		new_buf_size ;
+	FILE		*fp = NULL ;
+	
+	int		nret = 0 ;
+	
+	if( p_filesize )
+		filesize = (*p_filesize) ;
+		
+	if( filesize == -1 )
+	{
+		struct stat	st ;
+		
+		nret = stat( pathfilename , & st ) ;
+		if( nret == -1 )
+			return FASTERHTTP_ERROR_FILE_NOT_FOUND;
+		filesize = st.st_size ;
+	}
+	
+	if( filesize > 0 )
+	{
+		new_buf_size = (b->fill_ptr-b->base) + filesize + 1 ;
+		if( new_buf_size > b->buf_size )
+		{
+			nret = ReallocHttpBuffer( b , new_buf_size ) ;
+			if( nret )
+				return nret;
+		}
+		
+		fp = fopen( pathfilename , "r" ) ;
+		if( fp == NULL )
+			return FASTERHTTP_ERROR_FILE_NOT_FOUND;
+		
+		nret = fread( b->fill_ptr , filesize , 1 , fp ) ;
+		if( nret == -1 )
+			return FASTERHTTP_ERROR_FILE_NOT_FOUND;
+		
+		fclose( fp );
+		
+		b->fill_ptr += filesize ;
+	}
+	
+	if( p_filesize )
+		(*p_filesize) = filesize ;
+	
+	return 0;
+}
+
 int MemcatHttpBuffer( struct HttpBuffer *b , char *base , long len )
 {
+	int		nret = 0 ;
+	
 	while( (b->fill_ptr-b->base) + len > b->buf_size-1 )
 	{
-		ReallocHttpBuffer( b , -1 );
+		nret = ReallocHttpBuffer( b , -1 ) ;
+		if( nret )
+			return nret;
 	}
 	
 	memcpy( b->fill_ptr , base , len );
