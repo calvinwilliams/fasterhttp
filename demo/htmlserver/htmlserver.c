@@ -24,6 +24,9 @@ static int ProcessHttpRequest( struct HttpEnv *e , int sock , char *wwwroot )
 	int			filesize ;
 	struct HttpBuffer	*b = NULL ;
 	
+	SOCKLEN_T		socklen ;
+	struct sockaddr_in	sockaddr ;
+	
 	int			nret = 0 ;
 	
 	memset( pathfilename , 0x00 , sizeof(pathfilename) );
@@ -46,6 +49,21 @@ static int ProcessHttpRequest( struct HttpEnv *e , int sock , char *wwwroot )
 	nret = StrcatHttpBufferFromFile( b , pathfilename , &filesize ) ;
 	if( nret )
 		return nret;
+	
+	socklen = sizeof(struct sockaddr) ;
+	nret = getsockname( sock , (struct sockaddr *) & sockaddr , & socklen ) ;
+	if( nret )
+	{
+		printf( "getsockname failed , errno[%d]\n" , errno );
+		return -1;
+	}
+	
+	InfoLog( __FILE__ , __LINE__ , "%s:%d | %.*s %.*s %.*s | 200"
+		, inet_ntoa(sockaddr.sin_addr) , (int)ntohs(sockaddr.sin_port)
+		, GetHttpHeaderLen_METHOD(e) , GetHttpHeaderPtr_METHOD(e,NULL)
+		, GetHttpHeaderLen_URI(e) , GetHttpHeaderPtr_URI(e,NULL)
+		, GetHttpHeaderLen_VERSION(e) , GetHttpHeaderPtr_VERSION(e,NULL)
+		);
 	
 	return 0;
 }
@@ -82,7 +100,6 @@ static int OnAcceptingSocket( int epoll_fd , int listen_sock )
 		CLOSESOCKET( accept_sock );
 		return -1;
 	}
-DebugLog( __FILE__ , __LINE__ , "e[%p]" , e );
 	
 	memset( & event , 0x00 , sizeof(struct epoll_event) );
 	event.events = EPOLLIN | EPOLLERR ;
@@ -109,61 +126,60 @@ static int OnReceivingSocket( int epoll_fd , int accept_sock , struct HttpEnv *e
 	nret = ReceiveHttpRequestNonblock( accept_sock , NULL , e ) ;
 	if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
 	{
+printf( "111\n" );
 		;
 	}
 	else if( nret )
 	{
-		ErrorLog( __FILE__ , __LINE__ , "ReceiveHttpRequestNonblock failed[%d] , errno[%d]" , nret , errno );
-		return -1;
-	}
-	else
-	{
+printf( "222\n" );
 		if( nret == FASTERHTTP_INFO_TCP_CLOSE )
 		{
-			InfoLog( __FILE__ , __LINE__ , "accepted socket CLOSESOCKETd detected" );
+			InfoLog( __FILE__ , __LINE__ , "accepted socket closed detected" );
 			return -1;
 		}
 		else
 		{
+			ErrorLog( __FILE__ , __LINE__ , "ReceiveHttpRequestNonblock failed[%d] , errno[%d]" , nret , errno );
+			
+			nret = FormatHttpResponseStartLine( abs(nret)/1000 , e ) ;
 			if( nret )
 			{
-				nret = FormatHttpResponseStartLine( abs(nret)/1000 , e ) ;
-				if( nret )
-				{
-					ErrorLog( __FILE__ , __LINE__ , "FormatHttpResponseStartLine failed[%d] , errno[%d]" , nret , errno );
-					return -2;
-				}
-				
-				nret = StrcatHttpBuffer( GetHttpResponseBuffer(e) , HTTP_RETURN_NEWLINE ) ;
-				if( nret )
-				{
-					ErrorLog( __FILE__ , __LINE__ , "StrcatHttpBuffer failed[%d] , errno[%d]" , nret , errno );
-					return -2;
-				}
-			}
-			else
-			{
-				nret = ProcessHttpRequest( e , GetParserCustomIntData(e) , wwwroot ) ;
-				if( nret )
-				{
-					nret = FormatHttpResponseStartLine( HTTP_SERVICE_UNAVAILABLE , e ) ;
-					if( nret )
-					{
-						ErrorLog( __FILE__ , __LINE__ , "FormatHttpResponseStartLine failed[%d] , errno[%d]" , nret , errno );
-						return -2;
-					}
-				}
-			}
-			
-			memset( & event , 0x00 , sizeof(struct epoll_event) );
-			event.events = EPOLLIN | EPOLLERR ;
-			event.data.ptr = e ;
-			nret = epoll_ctl( epoll_fd , EPOLL_CTL_MOD , accept_sock , & event ) ;
-			if( nret == -1 )
-			{
-				ErrorLog( __FILE__ , __LINE__ , "epoll_ctl failed , errno[%d]" , errno );
+				ErrorLog( __FILE__ , __LINE__ , "FormatHttpResponseStartLine failed[%d] , errno[%d]" , nret , errno );
 				return -2;
 			}
+			
+			nret = StrcatHttpBuffer( GetHttpResponseBuffer(e) , HTTP_RETURN_NEWLINE ) ;
+			if( nret )
+			{
+				ErrorLog( __FILE__ , __LINE__ , "StrcatHttpBuffer failed[%d] , errno[%d]" , nret , errno );
+				return -2;
+			}
+			
+			return 0;
+		}
+	}
+	else
+	{
+printf( "333\n" );
+		nret = ProcessHttpRequest( e , GetParserCustomIntData(e) , wwwroot ) ;
+		if( nret )
+		{
+			nret = FormatHttpResponseStartLine( HTTP_SERVICE_UNAVAILABLE , e ) ;
+			if( nret )
+			{
+				ErrorLog( __FILE__ , __LINE__ , "FormatHttpResponseStartLine failed[%d] , errno[%d]" , nret , errno );
+				return -2;
+			}
+		}
+			
+		memset( & event , 0x00 , sizeof(struct epoll_event) );
+		event.events = EPOLLOUT | EPOLLERR ;
+		event.data.ptr = e ;
+		nret = epoll_ctl( epoll_fd , EPOLL_CTL_MOD , accept_sock , & event ) ;
+		if( nret == -1 )
+		{
+			ErrorLog( __FILE__ , __LINE__ , "epoll_ctl failed , errno[%d]" , errno );
+			return -2;
 		}
 	}
 	
@@ -190,6 +206,8 @@ static int OnSendingSocket( int epoll_fd , int accept_sock , struct HttpEnv *e )
 	{
 		if( CheckHttpKeepAlive(e) )
 		{
+			ResetHttpEnv(e);
+			
 			memset( & event , 0x00 , sizeof(struct epoll_event) );
 			event.events = EPOLLIN | EPOLLERR ;
 			event.data.ptr = e ;
@@ -345,7 +363,6 @@ static int htmlserver( short port , char *wwwroot )
 				int	accept_sock ;
 				
 				e = p_event->data.ptr ;
-DebugLog( __FILE__ , __LINE__ , "ee[%p]" , e );
 				accept_sock = GetParserCustomIntData(e) ;
 				
 				if( p_event->events & EPOLLIN )

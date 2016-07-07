@@ -30,6 +30,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 	char			*p_connection__keepalive = &(e->headers.connection__keepalive) ;
 	
 #if DEBUG_PARSE
+	setbuf( stdout , NULL );
 	printf( "DEBUG_PARSE >>>>>>>>> ParseHttpBuffer - b->process_ptr[0x%02X...][%.*s]\n" , b->process_ptr[0] , (int)(b->fill_ptr-b->process_ptr) , b->process_ptr );
 #endif
 	if( UNLIKELY( *(p_parse_step) == FASTERHTTP_PARSESTEP_BEGIN ) )
@@ -378,10 +379,12 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_HEADER_NAME0\n" );
 #endif
 			
+printf( "xxx\n" );
 			/*
 			while( UNLIKELY( (*p) == ' ' && p < fill_ptr ) )
 				p++;
 			*/
+printf( "p[0x%02X]\n" , (*p) );
 			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
@@ -389,6 +392,7 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			}
 			else if( LIKELY( (*p) == HTTP_RETURN ) )
 			{
+printf( "p+1[0x%02X]\n" , *(p+1) );
 				if( UNLIKELY( p+1 >= fill_ptr ) )
 				{
 					return FASTERHTTP_ERROR_HTTP_HEADER_INVALID;
@@ -404,6 +408,7 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 				
 
 #define _IF_THEN_GO_PARSING_BODY \
+printf( "*(p_content_length)[%d]\n" , *(p_content_length) ); \
 				if( *(p_content_length) > 0 ) \
 				{ \
 					e->body = p ; \
@@ -454,6 +459,9 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADER_INVALID;
 			p_header->name_len = p - p_header->name_ptr ;
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> HEADER-NAME [%.*s]\n" , (int)(p_header->name_len) , p_header->name_ptr );
+#endif
 			
 			while( UNLIKELY( (*p) != ':' && (*p) != HTTP_NEWLINE && p < fill_ptr ) )
 				p++;
@@ -507,6 +515,9 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 				p2--;
 			}
 			p++;
+#if DEBUG_PARSE
+			printf( "DEBUG_PARSE >>> HEADER-NAME-VALUE [%.*s]:[%.*s]\n" , (int)(p_header->name_len) , p_header->name_ptr , (int)(p_header->value_len) , p_header->value_ptr );
+#endif
 			
 			if( UNLIKELY( p_header->name_len == sizeof(HTTP_HEADER_CONTENT_LENGTH)-1 && STRNICMP( p_header->name_ptr , == , HTTP_HEADER_CONTENT_LENGTH , sizeof(HTTP_HEADER_CONTENT_LENGTH)-1 ) ) )
 			{
