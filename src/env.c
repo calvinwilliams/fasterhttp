@@ -68,7 +68,8 @@ void ResetHttpEnv( struct HttpEnv *e )
 	
 	/* struct HttpEnv */
 	
-	SetHttpTimeout( e , FASTERHTTP_TIMEOUT_DEFAULT );
+	ResetHttpTimeout( e );
+	
 	if( e->enable_response_compressing == 2 )
 		e->enable_response_compressing = 1 ;
 	
@@ -162,10 +163,19 @@ void DestroyHttpEnv( struct HttpEnv *e )
 	return;
 }
 
+void ResetHttpTimeout( struct HttpEnv *e )
+{
+	e->timeout.tv_sec = e->init_timeout ;
+	e->timeout.tv_usec = 0 ;
+	
+	return;
+}
+
 void SetHttpTimeout( struct HttpEnv *e , long timeout )
 {
-	e->timeout.tv_sec = timeout ;
-	e->timeout.tv_usec = 0 ;
+	e->init_timeout = timeout ;
+	
+	ResetHttpTimeout( e );
 	
 	return;
 }

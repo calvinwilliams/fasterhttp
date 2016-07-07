@@ -55,6 +55,7 @@ struct HttpHeaders
 
 struct HttpEnv
 {
+	long			init_timeout ;
 	struct timeval		timeout ;
 	char			enable_response_compressing ;
 	char			reforming_flag ;
@@ -75,6 +76,8 @@ struct HttpEnv
 	int			i ;
 	void			*ptr ;
 } ;
+
+void ResetHttpTimeout( struct HttpEnv *e );
 
 int ReallocHttpBuffer( struct HttpBuffer *b , long new_buf_size );
 void ReformingHttpBuffer( struct HttpBuffer *b );

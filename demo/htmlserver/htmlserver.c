@@ -124,6 +124,9 @@ static int OnAcceptingSocket( int epoll_fd , int listen_sock )
 		return -1;
 	}
 	
+	SetHttpTimeout( e , 120 );
+	EnableHttpResponseCompressing( e , 1 );
+	
 	memset( & event , 0x00 , sizeof(struct epoll_event) );
 	event.events = EPOLLIN | EPOLLERR ;
 	event.data.ptr = e ;
