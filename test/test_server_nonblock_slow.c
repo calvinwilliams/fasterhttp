@@ -145,7 +145,12 @@ int test_server_nonblock_slow_slow()
 			}
 		}
 		
-		if( nret == FASTERHTTP_INFO_TCP_CLOSE )
+		if( nret == FASTERHTTP_ERROR_TCP_CLOSE )
+		{
+			CLOSESOCKET( accept_sock );
+			continue;
+		}
+		else if( nret == FASTERHTTP_INFO_TCP_CLOSE )
 		{
 			CLOSESOCKET( accept_sock );
 			continue;
