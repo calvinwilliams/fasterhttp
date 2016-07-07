@@ -6,6 +6,8 @@
 #include "internal.h"
 #include "fasterhttp.h"
 
+#define DEBUG		0
+
 static void AjustTimeval( struct timeval *ptv , struct timeval *t1 , struct timeval *t2 )
 {
 #if ( defined _WIN32 )
@@ -63,8 +65,10 @@ int SendHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpBuff
 		return FASTERHTTP_ERROR_TCP_SEND;
 	}
 	
+#if DEBUG
 printf( "send\n" );
 _DumpHexBuffer( stdout , b->process_ptr , len );
+#endif
 
 #if ( defined _WIN32 )
 	time( &(t2.tv_sec) );
@@ -130,8 +134,10 @@ int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpB
 		return FASTERHTTP_ERROR_TCP_CLOSE;
 	}
 	
+#if DEBUG
 printf( "recv\n" );
 _DumpHexBuffer( stdout , b->fill_ptr , len );
+#endif
 
 #if ( defined _WIN32 )
 	time( &(t2.tv_sec) );

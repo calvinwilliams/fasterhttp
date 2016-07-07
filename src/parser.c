@@ -6,7 +6,7 @@
 #include "internal.h"
 #include "fasterhttp.h"
 
-#define DEBUG_PARSE	1
+#define DEBUG		0
 
 int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 {
@@ -29,9 +29,9 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 	char			*p_transfer_encoding__chunked = &(e->headers.transfer_encoding__chunked) ;
 	char			*p_connection__keepalive = &(e->headers.connection__keepalive) ;
 	
-#if DEBUG_PARSE
+#if DEBUG
 	setbuf( stdout , NULL );
-	printf( "DEBUG_PARSE >>>>>>>>> ParseHttpBuffer - b->process_ptr[0x%02X...][%.*s]\n" , b->process_ptr[0] , (int)(b->fill_ptr-b->process_ptr) , b->process_ptr );
+	printf( "DEBUG >>>>>>>>> ParseHttpBuffer - b->process_ptr[0x%02X...][%.*s]\n" , b->process_ptr[0] , (int)(b->fill_ptr-b->process_ptr) , b->process_ptr );
 #endif
 	if( UNLIKELY( *(p_parse_step) == FASTERHTTP_PARSESTEP_BEGIN ) )
 	{
@@ -52,8 +52,8 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 	switch( *(p_parse_step) )
 	{
 		case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_METHOD0 :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_METHOD0\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_METHOD0\n" );
 #endif
 			
 			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
@@ -71,8 +71,8 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_METHOD ;
 			
 		case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_METHOD :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_METHOD\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_METHOD\n" );
 #endif
 			
 			for( ; LIKELY( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
@@ -141,8 +141,8 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_URI0 ;
 			
 		case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_URI0 :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_URI0\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_URI0\n" );
 #endif
 			
 			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
@@ -160,8 +160,8 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_URI ;
 			
 		case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_URI :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_URI\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_URI\n" );
 #endif
 			
 			for( ; LIKELY( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
@@ -179,8 +179,8 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_VERSION0 ;
 			
 		case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_VERSION0 :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_VERSION0\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_VERSION0\n" );
 #endif
 			
 			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
@@ -198,8 +198,8 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_VERSION ;
 			
 		case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_VERSION :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_VERSION\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_VERSION\n" );
 #endif
 			
 			for( ; LIKELY( (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
@@ -238,8 +238,8 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			goto _GOTO_PARSESTEP_HEADER_NAME0;
 			
 		case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_VERSION0 :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_VERSION0\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_VERSION0\n" );
 #endif
 			
 			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
@@ -257,8 +257,8 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_VERSION ;
 			
 		case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_VERSION :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_VERSION\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_VERSION\n" );
 #endif
 			
 			for( ; LIKELY( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
@@ -296,8 +296,8 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_STATUSCODE0 ;
 			
 		case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_STATUSCODE0 :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_STATUSCODE0\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_STATUSCODE0\n" );
 #endif
 			
 			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
@@ -315,8 +315,8 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_STATUSCODE ;
 			
 		case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_STATUSCODE :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_STATUSCODE\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_STATUSCODE\n" );
 #endif
 			
 			for( ; LIKELY( (*p) != ' ' && (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
@@ -334,8 +334,8 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_REASONPHRASE0 ;
 			
 		case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_REASONPHRASE0 :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_REASONPHRASE0\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_REASONPHRASE0\n" );
 #endif
 			
 			for( ; UNLIKELY( (*p) == ' ' && p < fill_ptr ) ; p++ )
@@ -353,8 +353,8 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_REASONPHRASE ;
 			
 		case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_REASONPHRASE :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_REASONPHRASE\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_RESPONSESTARTLINE_REASONPHRASE\n" );
 #endif
 			
 			for( ; LIKELY( (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
@@ -375,8 +375,8 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 		case FASTERHTTP_PARSESTEP_HEADER_NAME0 :
 			
 _GOTO_PARSESTEP_HEADER_NAME0 :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_HEADER_NAME0\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_HEADER_NAME0\n" );
 #endif
 			
 			/*
@@ -441,8 +441,8 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			}
 			
 		case FASTERHTTP_PARSESTEP_HEADER_NAME :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_HEADER_NAME\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_HEADER_NAME\n" );
 #endif
 			
 			while( LIKELY( (*p) != ' ' && (*p) != ':' && (*p) != HTTP_NEWLINE && p < fill_ptr ) )
@@ -455,8 +455,8 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			if( UNLIKELY( (*p) == HTTP_NEWLINE ) )
 				return FASTERHTTP_ERROR_HTTP_HEADER_INVALID;
 			p_header->name_len = p - p_header->name_ptr ;
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> HEADER-NAME [%.*s]\n" , (int)(p_header->name_len) , p_header->name_ptr );
+#if DEBUG
+			printf( "DEBUG >>> HEADER-NAME [%.*s]\n" , (int)(p_header->name_len) , p_header->name_ptr );
 #endif
 			
 			while( UNLIKELY( (*p) != ':' && (*p) != HTTP_NEWLINE && p < fill_ptr ) )
@@ -473,8 +473,8 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_HEADER_VALUE0 ;
 			
 		case FASTERHTTP_PARSESTEP_HEADER_VALUE0 :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_HEADER_VALUE0\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_HEADER_VALUE0\n" );
 #endif
 			
 			while( LIKELY( (*p) == ' ' && p < fill_ptr ) )
@@ -492,8 +492,8 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_HEADER_VALUE ;
 			
 		case FASTERHTTP_PARSESTEP_HEADER_VALUE :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_HEADER_VALUE\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_HEADER_VALUE\n" );
 #endif
 			
 			while( LIKELY( (*p) != HTTP_NEWLINE && p < fill_ptr ) )
@@ -511,8 +511,8 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 				p2--;
 			}
 			p++;
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> HEADER-NAME-VALUE [%.*s]:[%.*s]\n" , (int)(p_header->name_len) , p_header->name_ptr , (int)(p_header->value_len) , p_header->value_ptr );
+#if DEBUG
+			printf( "DEBUG >>> HEADER-NAME-VALUE [%.*s]:[%.*s]\n" , (int)(p_header->name_len) , p_header->name_ptr , (int)(p_header->value_len) , p_header->value_ptr );
 #endif
 			
 			if( UNLIKELY( p_header->name_len == sizeof(HTTP_HEADER_CONTENT_LENGTH)-1 && STRNICMP( p_header->name_ptr , == , HTTP_HEADER_CONTENT_LENGTH , sizeof(HTTP_HEADER_CONTENT_LENGTH)-1 ) ) )
@@ -569,8 +569,8 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 		case FASTERHTTP_PARSESTEP_BODY :
 			
 _GOTO_PARSESTEP_BODY :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_BODY\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_BODY\n" );
 #endif
 			
 			if( LIKELY( fill_ptr - e->body >= *(p_content_length) ) )
@@ -579,7 +579,6 @@ _GOTO_PARSESTEP_BODY :
 				*(p_parse_step) = FASTERHTTP_PARSESTEP_DONE ;
 				if( b->fill_ptr > b->process_ptr )
 					e->reforming_flag = 1 ;
-printf( "e->reforming_flag[%d]\n" , e->reforming_flag );
 				return 0;
 			}
 			else
@@ -591,8 +590,8 @@ printf( "e->reforming_flag[%d]\n" , e->reforming_flag );
 		case FASTERHTTP_PARSESTEP_CHUNKED_SIZE :
 			
 _GOTO_PARSESTEP_CHUNKED_SIZE :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_CHUNKED_SIZE\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_CHUNKED_SIZE\n" );
 #endif
 			
 			for( ; UNLIKELY( (*p) != HTTP_NEWLINE && p < fill_ptr ) ; p++ )
@@ -631,8 +630,8 @@ _GOTO_PARSESTEP_CHUNKED_SIZE :
 			*(p_parse_step) = FASTERHTTP_PARSESTEP_CHUNKED_DATA ;
 			
 		case FASTERHTTP_PARSESTEP_CHUNKED_DATA :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_CHUNKED_DATA\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_CHUNKED_DATA\n" );
 #endif
 			
 			if( LIKELY( fill_ptr - e->chunked_body >= e->chunked_length + 2 ) )
@@ -659,15 +658,15 @@ _GOTO_PARSESTEP_CHUNKED_SIZE :
 			}
 			
 		case FASTERHTTP_PARSESTEP_DONE :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_DONE\n" );
+#if DEBUG
+			printf( "DEBUG >>> case FASTERHTTP_PARSESTEP_DONE\n" );
 #endif
 			
 			return 0;
 
 		default :
-#if DEBUG_PARSE
-			printf( "DEBUG_PARSE >>> default\n" );
+#if DEBUG
+			printf( "DEBUG >>> default\n" );
 #endif
 			return FASTERHTTP_ERROR_INTERNAL;
 	}

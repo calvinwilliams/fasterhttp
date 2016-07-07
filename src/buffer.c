@@ -270,7 +270,7 @@ int StrcatHttpBufferFromFile( struct HttpBuffer *b , char *pathfilename , int *p
 			return FASTERHTTP_ERROR_FILE_NOT_FOUND;
 		
 		nret = fread( b->fill_ptr , filesize , 1 , fp ) ;
-		if( nret == -1 )
+		if( nret != 1 )
 			return FASTERHTTP_ERROR_FILE_NOT_FOUND;
 		
 		fclose( fp );

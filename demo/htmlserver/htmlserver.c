@@ -25,7 +25,12 @@ static int ProcessHttpRequest( struct HttpEnv *e , int sock , char *wwwroot )
 	struct HttpBuffer	*b = NULL ;
 	
 	SOCKLEN_T		socklen ;
-	struct sockaddr_in	sockaddr ;
+	struct sockaddr_in	client_sockaddr ;
+	char			client_ip[ 15 + 1 ] ;
+	int			client_port ;
+	struct sockaddr_in	server_sockaddr ;
+	char			server_ip[ 15 + 1 ] ;
+	int			server_port ;
 	
 	int			nret = 0 ;
 	
@@ -39,7 +44,8 @@ static int ProcessHttpRequest( struct HttpEnv *e , int sock , char *wwwroot )
 	
 	b = GetHttpResponseBuffer(e) ;
 	nret = StrcatfHttpBuffer( b ,	"HTTP/1.1 200 OK\r\n"
-					"Content-Type: text/html; charset=gb18030\r\n"
+					"Server: htmlserver/1.0.0\r\n"
+					"Content-Type: text/html; charset=UTF-8\r\n"
 					"Content-Length: %d\r\n"
 					"\r\n"
 					, filesize ) ;
@@ -51,15 +57,29 @@ static int ProcessHttpRequest( struct HttpEnv *e , int sock , char *wwwroot )
 		return nret;
 	
 	socklen = sizeof(struct sockaddr) ;
-	nret = getsockname( sock , (struct sockaddr *) & sockaddr , & socklen ) ;
+	nret = getpeername( sock , (struct sockaddr *) & client_sockaddr , & socklen ) ;
+	if( nret )
+	{
+		printf( "getpeername failed , errno[%d]\n" , errno );
+		return -1;
+	}
+	memset( client_ip , 0x00 , sizeof(client_ip) );
+	inet_ntop( AF_INET , &(client_sockaddr.sin_addr) , client_ip , sizeof(client_ip) );
+	client_port = (int)ntohs(client_sockaddr.sin_port) ;
+	
+	socklen = sizeof(struct sockaddr) ;
+	nret = getsockname( sock , (struct sockaddr *) & server_sockaddr , & socklen ) ;
 	if( nret )
 	{
 		printf( "getsockname failed , errno[%d]\n" , errno );
 		return -1;
 	}
+	memset( server_ip , 0x00 , sizeof(server_ip) );
+	inet_ntop( AF_INET , &(server_sockaddr.sin_addr) , server_ip , sizeof(server_ip) );
+	server_port = (int)ntohs(server_sockaddr.sin_port) ;
 	
-	InfoLog( __FILE__ , __LINE__ , "%s:%d | %.*s %.*s %.*s | 200"
-		, inet_ntoa(sockaddr.sin_addr) , (int)ntohs(sockaddr.sin_port)
+	InfoLog( __FILE__ , __LINE__ , "%s:%d -> %s:%d | %.*s %.*s %.*s 200"
+		, client_ip , client_port , server_ip , server_port
 		, GetHttpHeaderLen_METHOD(e) , GetHttpHeaderPtr_METHOD(e,NULL)
 		, GetHttpHeaderLen_URI(e) , GetHttpHeaderPtr_URI(e,NULL)
 		, GetHttpHeaderLen_VERSION(e) , GetHttpHeaderPtr_VERSION(e,NULL)
@@ -90,7 +110,7 @@ static int OnAcceptingSocket( int epoll_fd , int listen_sock )
 	}
 	else
 	{
-		InfoLog( __FILE__ , __LINE__ , "accept ok\n" );
+		DebugLog( __FILE__ , __LINE__ , "accept ok" );
 	}
 	
 	opts = fcntl( accept_sock , F_GETFL ) ;
@@ -101,7 +121,6 @@ static int OnAcceptingSocket( int epoll_fd , int listen_sock )
 	if( e == NULL )
 	{
 		ErrorLog( __FILE__ , __LINE__ , "CreateHttpEnv failed , errno[%d]" , errno );
-		CLOSESOCKET( accept_sock );
 		return -1;
 	}
 	
@@ -113,8 +132,6 @@ static int OnAcceptingSocket( int epoll_fd , int listen_sock )
 	if( nret == -1 )
 	{
 		ErrorLog( __FILE__ , __LINE__ , "epoll_ctl failed , errno[%d]" , errno );
-		DestroyHttpEnv( e );
-		CLOSESOCKET( accept_sock );
 		return -1;
 	}
 	
@@ -226,7 +243,7 @@ static int OnSendingSocket( int epoll_fd , int accept_sock , struct HttpEnv *e )
 		}
 		else
 		{
-			InfoLog( __FILE__ , __LINE__ , "close client socket" );
+			DebugLog( __FILE__ , __LINE__ , "close client socket" );
 			return -1;
 		}
 	}
@@ -376,11 +393,13 @@ static int htmlserver( short port , char *wwwroot )
 					nret = OnReceivingSocket( epoll_fd , accept_sock , e , wwwroot ) ;
 					if( nret == -1 )
 					{
+						DestroyHttpEnv(e);
 						epoll_ctl( epoll_fd , EPOLL_CTL_DEL , accept_sock , NULL );
 						CLOSESOCKET( accept_sock );
 					}
 					else if( nret == -2 )
 					{
+						DestroyHttpEnv(e);
 						epoll_ctl( epoll_fd , EPOLL_CTL_DEL , accept_sock , NULL );
 						CLOSESOCKET( accept_sock );
 						CLOSESOCKET( listen_sock );
@@ -393,11 +412,13 @@ static int htmlserver( short port , char *wwwroot )
 					nret = OnSendingSocket( epoll_fd , accept_sock , e ) ;
 					if( nret == -1 )
 					{
+						DestroyHttpEnv(e);
 						epoll_ctl( epoll_fd , EPOLL_CTL_DEL , accept_sock , NULL );
 						CLOSESOCKET( accept_sock );
 					}
 					else if( nret == -2 )
 					{
+						DestroyHttpEnv(e);
 						epoll_ctl( epoll_fd , EPOLL_CTL_DEL , accept_sock , NULL );
 						CLOSESOCKET( accept_sock );
 						CLOSESOCKET( listen_sock );
@@ -436,7 +457,7 @@ static void usage()
 int main( int argc , char *argv[] )
 {
 	SetLogFile( "%s/log/htmlserver.log" , getenv("HOME") );
-	SetLogLevel( LOGLEVEL_DEBUG );
+	SetLogLevel( LOGLEVEL_INFO );
 	
 	if( argc == 1 + 2 )
 	{
