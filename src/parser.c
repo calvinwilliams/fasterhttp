@@ -379,12 +379,10 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			printf( "DEBUG_PARSE >>> case FASTERHTTP_PARSESTEP_HEADER_NAME0\n" );
 #endif
 			
-printf( "xxx\n" );
 			/*
 			while( UNLIKELY( (*p) == ' ' && p < fill_ptr ) )
 				p++;
 			*/
-printf( "p[0x%02X]\n" , (*p) );
 			if( UNLIKELY( p >= fill_ptr ) )
 			{
 				b->process_ptr = p ;
@@ -392,7 +390,6 @@ printf( "p[0x%02X]\n" , (*p) );
 			}
 			else if( LIKELY( (*p) == HTTP_RETURN ) )
 			{
-printf( "p+1[0x%02X]\n" , *(p+1) );
 				if( UNLIKELY( p+1 >= fill_ptr ) )
 				{
 					return FASTERHTTP_ERROR_HTTP_HEADER_INVALID;
@@ -408,7 +405,6 @@ printf( "p+1[0x%02X]\n" , *(p+1) );
 				
 
 #define _IF_THEN_GO_PARSING_BODY \
-printf( "*(p_content_length)[%d]\n" , *(p_content_length) ); \
 				if( *(p_content_length) > 0 ) \
 				{ \
 					e->body = p ; \

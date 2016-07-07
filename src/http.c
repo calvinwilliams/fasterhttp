@@ -643,11 +643,6 @@ int ReceiveHttpRequestNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	nret = ReceiveHttpBuffer( sock , ssl , e , &(e->request_buffer) ) ;
 	if(	nret == FASTERHTTP_ERROR_TCP_CLOSE
 		&&
-		(	( e->headers.version == HTTP_VERSION_1_0_N && e->headers.connection__keepalive == 1 )
-			||
-			( e->headers.version == HTTP_VERSION_1_1_N && e->headers.connection__keepalive != -1 )
-		)
-		&&
 		e->request_buffer.fill_ptr == e->request_buffer.base
 	)
 		return FASTERHTTP_INFO_TCP_CLOSE;

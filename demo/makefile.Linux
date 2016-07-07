@@ -1,5 +1,5 @@
 # 此文件由makelocal.sh自动生成
-MAKEFILE_POSTFIX=.AIX
+MAKEFILE_POSTFIX=.Linux
 # 此文件由makedir.sh自动生成
 ############################################################
 # 项目名 :
@@ -9,9 +9,7 @@ MAKEFILE_POSTFIX=.AIX
 
 ###### 子目录配置区
 DIROBJS		= \
-			src \
-			test \
-			demo \
+			htmlserver \
 
 ###### 加载mktpl模板库
 # 文件系统宏
@@ -27,15 +25,16 @@ all		:	make
 # make规则
 .PHONY:make
 make	:
+	ps
 	@for i in $(DIROBJS) ; do \
 		if [ -d "$$i" ] ; then \
 			if [ -f "$$i/makefile$(MAKEFILE_POSTFIX)" ] ; then \
-				cd $$i ; \
+				$(CD) $$i ; \
 				$(MAKE) -f makefile$(MAKEFILE_POSTFIX) ; \
 				if [ $$? -ne 0 ] ; then \
 					exit 1 ; \
 				fi ; \
-				cd .. ; \
+				$(CD) .. ; \
 			fi ; \
 		fi ; \
 	done
@@ -46,12 +45,12 @@ clean	:
 	@for i in $(DIROBJS) ; do \
 		if [ -d "$$i" ] ; then \
 			if [ -f "$$i/makefile$(MAKEFILE_POSTFIX)" ] ; then \
-				cd $$i ; \
+				$(CD) $$i ; \
 				$(MAKE) -f makefile$(MAKEFILE_POSTFIX) clean ; \
 				if [ $$? -ne 0 ] ; then \
 					exit 1 ; \
 				fi ; \
-				cd .. ; \
+				$(CD) .. ; \
 			fi ; \
 		fi ; \
 	done
@@ -62,12 +61,12 @@ install	:
 	@for i in $(DIROBJS) ; do \
 		if [ -d "$$i" ] ; then \
 			if [ -f "$$i/makefile$(MAKEFILE_POSTFIX)" ] ; then \
-				cd $$i ; \
+				$(CD) $$i ; \
 				$(MAKE) -f makefile$(MAKEFILE_POSTFIX) install ; \
 				if [ $$? -ne 0 ] ; then \
 					exit 1 ; \
 				fi ; \
-				cd .. ; \
+				$(CD) .. ; \
 			fi ; \
 		fi ; \
 	done
@@ -78,12 +77,12 @@ uninstall	:
 	@for i in $(DIROBJS) ; do \
 		if [ -d "$$i" ] ; then \
 			if [ -f "$$i/makefile$(MAKEFILE_POSTFIX)" ] ; then \
-				cd $$i ; \
+				$(CD) $$i ; \
 				$(MAKE) -f makefile$(MAKEFILE_POSTFIX) uninstall ; \
 				if [ $$? -ne 0 ] ; then \
 					exit 1 ; \
 				fi ; \
-				cd .. ; \
+				$(CD) .. ; \
 			fi ; \
 		fi ; \
 	done

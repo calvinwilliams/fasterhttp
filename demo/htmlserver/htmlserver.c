@@ -88,6 +88,10 @@ static int OnAcceptingSocket( int epoll_fd , int listen_sock )
 		ErrorLog( __FILE__ , __LINE__ , "accept failed , errno[%d]" , errno );
 		return -1;
 	}
+	else
+	{
+		InfoLog( __FILE__ , __LINE__ , "accept ok\n" );
+	}
 	
 	opts = fcntl( accept_sock , F_GETFL ) ;
 	opts = opts | O_NONBLOCK ;
@@ -126,13 +130,16 @@ static int OnReceivingSocket( int epoll_fd , int accept_sock , struct HttpEnv *e
 	nret = ReceiveHttpRequestNonblock( accept_sock , NULL , e ) ;
 	if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
 	{
-printf( "111\n" );
 		;
 	}
 	else if( nret )
 	{
-printf( "222\n" );
-		if( nret == FASTERHTTP_INFO_TCP_CLOSE )
+		if( nret == FASTERHTTP_ERROR_TCP_CLOSE )
+		{
+			ErrorLog( __FILE__ , __LINE__ , "accepted socket closed detected" );
+			return -1;
+		}
+		else if( nret == FASTERHTTP_INFO_TCP_CLOSE )
 		{
 			InfoLog( __FILE__ , __LINE__ , "accepted socket closed detected" );
 			return -1;
@@ -160,7 +167,6 @@ printf( "222\n" );
 	}
 	else
 	{
-printf( "333\n" );
 		nret = ProcessHttpRequest( e , GetParserCustomIntData(e) , wwwroot ) ;
 		if( nret )
 		{
@@ -367,7 +373,6 @@ static int htmlserver( short port , char *wwwroot )
 				
 				if( p_event->events & EPOLLIN )
 				{
-DebugLog( __FILE__ , __LINE__ , "OnReceivingSocket" );
 					nret = OnReceivingSocket( epoll_fd , accept_sock , e , wwwroot ) ;
 					if( nret == -1 )
 					{
@@ -385,7 +390,6 @@ DebugLog( __FILE__ , __LINE__ , "OnReceivingSocket" );
 				}
 				else if( p_event->events & EPOLLOUT )
 				{
-DebugLog( __FILE__ , __LINE__ , "OnSendingSocket" );
 					nret = OnSendingSocket( epoll_fd , accept_sock , e ) ;
 					if( nret == -1 )
 					{
@@ -403,14 +407,12 @@ DebugLog( __FILE__ , __LINE__ , "OnSendingSocket" );
 				}
 				else if( p_event->events & EPOLLERR )
 				{
-DebugLog( __FILE__ , __LINE__ , "EPOLLERR" );
 					ErrorLog( __FILE__ , __LINE__ , "accept_sock epoll EPOLLERR" );
 					epoll_ctl( epoll_fd , EPOLL_CTL_DEL , accept_sock , NULL );
 					CLOSESOCKET( accept_sock );
 				}
 				else
 				{
-DebugLog( __FILE__ , __LINE__ , "invalid" );
 					ErrorLog( __FILE__ , __LINE__ , "accept_sock epoll event invalid[%d]" , p_event->events );
 					epoll_ctl( epoll_fd , EPOLL_CTL_DEL , accept_sock , NULL );
 					CLOSESOCKET( accept_sock );
