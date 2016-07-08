@@ -48,22 +48,16 @@ int SendHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpBuff
 	
 	nret = select( sock+1 , NULL , & write_fds , NULL , &(e->timeout) ) ;
 	if( nret == 0 )
-	{
 		return FASTERHTTP_ERROR_TCP_SELECT_SEND_TIMEOUT;
-	}
 	else if( nret != 1 )
-	{
 		return FASTERHTTP_ERROR_TCP_SELECT_SEND;
-	}
 	
 	if( ssl == NULL )
 		len = (int)send( sock , b->process_ptr , b->fill_ptr-b->process_ptr , 0 ) ;
 	else
 		len = (int)SSL_write( ssl , b->process_ptr , b->fill_ptr-b->process_ptr ) ;
 	if( len == -1 )
-	{
 		return FASTERHTTP_ERROR_TCP_SEND;
-	}
 	
 #if DEBUG
 printf( "send\n" );
@@ -113,26 +107,18 @@ int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpB
 	
 	nret = select( sock+1 , & read_fds , NULL , NULL , &(e->timeout) ) ;
 	if( nret == 0 )
-	{
 		return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE_TIMEOUT;
-	}
 	else if( nret != 1 )
-	{
 		return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE;
-	}
 	
 	if( ssl == NULL )
 		len = (int)recv( sock , b->fill_ptr , b->buf_size-1 - (b->fill_ptr-b->base) , 0 ) ;
 	else
 		len = (int)SSL_read( ssl , b->fill_ptr , b->buf_size-1 - (b->fill_ptr-b->base) ) ;
 	if( len == -1 )
-	{
 		return FASTERHTTP_ERROR_TCP_RECEIVE;
-	}
 	else if( len == 0 )
-	{
 		return FASTERHTTP_ERROR_TCP_CLOSE;
-	}
 	
 #if DEBUG
 printf( "recv\n" );
@@ -176,13 +162,9 @@ int ReceiveHttpBuffer1( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct Http
 	
 	nret = select( sock+1 , & read_fds , NULL , NULL , &(e->timeout) ) ;
 	if( nret == 0 )
-	{
 		return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE_TIMEOUT;
-	}
 	else if( nret != 1 )
-	{
 		return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE;
-	}
 	
 	if( ssl == NULL )
 		len = (long)recv( sock , b->fill_ptr , 1 , 0 ) ;

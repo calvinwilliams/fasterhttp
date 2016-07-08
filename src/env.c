@@ -6,7 +6,7 @@
 #include "internal.h"
 #include "fasterhttp.h"
 
-int _FASTERHTTP_VERSION_1_0_0 = 0 ;
+int __FASTERHTTP_VERSION_1_0_0 = 0 ;
 
 struct HttpEnv *CreateHttpEnv()
 {

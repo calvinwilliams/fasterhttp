@@ -407,7 +407,12 @@ int ReceiveHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	{
 		nret = ReceiveHttpBuffer( sock , ssl , e , &(e->response_buffer) ) ;
 		if( nret )
-			return nret;
+		{
+			if( nret == FASTERHTTP_ERROR_TCP_CLOSE && e->parse_step == FASTERHTTP_PARSESTEP_BEGIN )
+				return FASTERHTTP_INFO_TCP_CLOSE;
+			else
+				return nret;
+		}
 		
 		nret = ParseHttpBuffer( e , &(e->response_buffer) ) ;
 		if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
@@ -426,18 +431,13 @@ int ReceiveHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	while(1)
 	{
 		nret = ReceiveHttpBuffer( sock , ssl , e , &(e->request_buffer) ) ;
-		if(	nret == FASTERHTTP_ERROR_TCP_CLOSE
-			&&
-			(	( e->headers.version == HTTP_VERSION_1_0_N && e->headers.connection__keepalive == 1 )
-				||
-				( e->headers.version == HTTP_VERSION_1_1_N && e->headers.connection__keepalive != -1 )
-			)
-			&&
-			e->request_buffer.fill_ptr == e->request_buffer.base
-		)
-			return FASTERHTTP_INFO_TCP_CLOSE;
-		else if( nret )
-			return nret;
+		if( nret )
+		{
+			if( nret == FASTERHTTP_ERROR_TCP_CLOSE && e->parse_step == FASTERHTTP_PARSESTEP_BEGIN )
+				return FASTERHTTP_INFO_TCP_CLOSE;
+			else
+				return nret;
+		}
 		
 		nret = ParseHttpBuffer( e , &(e->request_buffer) ) ;
 		if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
@@ -608,7 +608,12 @@ int ReceiveHttpResponseNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	
 	nret = ReceiveHttpBuffer( sock , ssl , e , &(e->response_buffer) ) ;
 	if( nret )
-		return nret;
+	{
+		if( nret == FASTERHTTP_ERROR_TCP_CLOSE && e->parse_step == FASTERHTTP_PARSESTEP_BEGIN )
+			return FASTERHTTP_INFO_TCP_CLOSE;
+		else
+			return nret;
+	}
 	
 	nret = ParseHttpBuffer( e , &(e->response_buffer) ) ;
 	if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
@@ -625,7 +630,12 @@ _WINDLL_FUNC int ReceiveHttpResponseNonblock1( SOCKET sock , SSL *ssl , struct H
 	
 	nret = ReceiveHttpBuffer1( sock , ssl , e , &(e->response_buffer) ) ;
 	if( nret )
-		return nret;
+	{
+		if( nret == FASTERHTTP_ERROR_TCP_CLOSE && e->parse_step == FASTERHTTP_PARSESTEP_BEGIN )
+			return FASTERHTTP_INFO_TCP_CLOSE;
+		else
+			return nret;
+	}
 	
 	nret = ParseHttpBuffer( e , &(e->response_buffer) ) ;
 	if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
@@ -641,13 +651,13 @@ int ReceiveHttpRequestNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	int		nret = 0 ;
 	
 	nret = ReceiveHttpBuffer( sock , ssl , e , &(e->request_buffer) ) ;
-	if(	nret == FASTERHTTP_ERROR_TCP_CLOSE
-		&&
-		e->request_buffer.fill_ptr == e->request_buffer.base
-	)
-		return FASTERHTTP_INFO_TCP_CLOSE;
-	else if( nret )
-		return nret;
+	if( nret )
+	{
+		if( nret == FASTERHTTP_ERROR_TCP_CLOSE && e->parse_step == FASTERHTTP_PARSESTEP_BEGIN )
+			return FASTERHTTP_INFO_TCP_CLOSE;
+		else
+			return nret;
+	}
 	
 	nret = ParseHttpBuffer( e , &(e->request_buffer) ) ;
 	if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
@@ -663,18 +673,13 @@ _WINDLL_FUNC int ReceiveHttpRequestNonblock1( SOCKET sock , SSL *ssl , struct Ht
 	int		nret = 0 ;
 	
 	nret = ReceiveHttpBuffer1( sock , ssl , e , &(e->request_buffer) ) ;
-	if(	nret == FASTERHTTP_ERROR_TCP_CLOSE
-		&&
-		(	( e->headers.version == HTTP_VERSION_1_0_N && e->headers.connection__keepalive == 1 )
-			||
-			( e->headers.version == HTTP_VERSION_1_1_N && e->headers.connection__keepalive != -1 )
-		)
-		&&
-		e->request_buffer.fill_ptr == e->request_buffer.base
-	)
-		return FASTERHTTP_INFO_TCP_CLOSE;
-	else 	if( nret )
-		return nret;
+	if( nret )
+	{
+		if( nret == FASTERHTTP_ERROR_TCP_CLOSE && e->parse_step == FASTERHTTP_PARSESTEP_BEGIN )
+			return FASTERHTTP_INFO_TCP_CLOSE;
+		else
+			return nret;
+	}
 	
 	nret = ParseHttpBuffer( e , &(e->request_buffer) ) ;
 	if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
