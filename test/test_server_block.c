@@ -15,7 +15,7 @@ int ProcessHttpRequest( struct HttpEnv *e , void *p )
 	if( nret )
 	{
 		printf( "getsockname failed , errno[%d]\n" , errno );
-		return -1;
+		return HTTP_INTERNAL_SERVER_ERROR;
 	}
 	
 	printf( "--- %s:%d | [%.*s] [%.*s] [%.*s] ------------------\n" , inet_ntoa(sockaddr.sin_addr) , (int)ntohs(sockaddr.sin_port)
@@ -40,7 +40,7 @@ int ProcessHttpRequest( struct HttpEnv *e , void *p )
 	if( nret )
 	{
 		printf( "StrcatfHttpBuffer failed , errno[%d]\n" , errno );
-		return -1;
+		return HTTP_INTERNAL_SERVER_ERROR;
 	}
 	
 	return 0;
