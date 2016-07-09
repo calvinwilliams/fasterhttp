@@ -95,35 +95,7 @@ PostBuild_Cmds=mkdir "%ProgramFiles%\fasterhttp"	mkdir "%ProgramFiles%\fasterhtt
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=..\..\body.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\buffer.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\comm.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\env.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\header.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\http.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\parser.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\util.c
+SOURCE=..\..\fasterhttp.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -132,10 +104,6 @@ SOURCE=..\..\util.c
 # Begin Source File
 
 SOURCE=..\..\fasterhttp.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\internal.h
 # End Source File
 # End Group
 # Begin Group "Resource Files"
