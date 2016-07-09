@@ -15,7 +15,7 @@ int ProcessHttpRequest( struct HttpEnv *e , void *p )
 	if( nret )
 	{
 		printf( "getsockname failed , errno[%d]\n" , errno );
-		return -1;
+		return HTTP_INTERNAL_SERVER_ERROR;
 	}
 	
 	printf( "--- %s:%d | [%.*s] [%.*s] [%.*s] ------------------\n" , inet_ntoa(sockaddr.sin_addr) , (int)ntohs(sockaddr.sin_port)
@@ -40,7 +40,7 @@ int ProcessHttpRequest( struct HttpEnv *e , void *p )
 	if( nret )
 	{
 		printf( "StrcatfHttpBuffer failed , errno[%d]\n" , errno );
-		return -1;
+		return HTTP_INTERNAL_SERVER_ERROR;
 	}
 	
 	return 0;
@@ -157,14 +157,7 @@ int test_server_nonblock_slow_slow()
 		}
 		else if( nret )
 		{
-			nret = FormatHttpResponseStartLine( abs(nret)/1000 , e ) ;
-			if( nret )
-			{
-				CLOSESOCKET( accept_sock );
-				continue;
-			}
-			
-			nret = StrcatHttpBuffer( GetHttpResponseBuffer(e) , HTTP_RETURN_NEWLINE ) ;
+			nret = FormatHttpResponseStartLine( abs(nret)/1000 , e , 1 ) ;
 			if( nret )
 			{
 				CLOSESOCKET( accept_sock );
@@ -176,7 +169,7 @@ int test_server_nonblock_slow_slow()
 			nret = ProcessHttpRequest( e , (void*)(&accept_sock) ) ;
 			if( nret )
 			{
-				nret = FormatHttpResponseStartLine( HTTP_SERVICE_UNAVAILABLE , e ) ;
+				nret = FormatHttpResponseStartLine( nret , e , 1 ) ;
 				if( nret )
 				{
 					CLOSESOCKET( accept_sock );

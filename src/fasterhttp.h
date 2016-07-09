@@ -140,7 +140,7 @@ char *strcasestr(const char *haystack, const char *needle);
 #define HTTP_BAD_GATEWAY			502 
 #define HTTP_SERVICE_UNAVAILABLE		503 
 #define HTTP_GATEWAY_TIMEOUT			504 
-#define HTTP_HTTP_VERSION_NOT_SUPPORTED		505
+#define HTTP_VERSION_NOT_SUPPORTED		505
 
 #define HTTP_CONTINUE_S				"100"
 #define HTTP_SWITCHING_PROTOCOL_S		"101"
@@ -181,7 +181,48 @@ char *strcasestr(const char *haystack, const char *needle);
 #define HTTP_BAD_GATEWAY_S			"502"
 #define HTTP_SERVICE_UNAVAILABLE_S		"503"
 #define HTTP_GATEWAY_TIMEOUT_S			"504"
-#define HTTP_HTTP_VERSION_NOT_SUPPORTED_S	"505"
+#define HTTP_VERSION_NOT_SUPPORTED_S		"505"
+
+#define HTTP_CONTINUE_T				"Continue"
+#define HTTP_SWITCHING_PROTOCOL_T		"Switching Protocol"
+#define HTTP_OK_T				"OK"
+#define HTTP_CREATED_T				"Created"
+#define HTTP_ACCEPTED_T				"Accepted"
+#define HTTP_NON_AUTHORITATIVE_INFORMATION_T	"Non Authoritative Information"
+#define HTTP_NO_CONTENT_T			"No Content"
+#define HTTP_RESET_CONTENT_T			"Reset Content"
+#define HTTP_PARTIAL_CONTENT_T			"Partial Content"
+#define HTTP_MULTIPLE_CHOICES_T			"Multiple Choices"
+#define HTTP_MOVED_PERMANNETLY_T		"Moved Permannetly"
+#define HTTP_FOUND_T				"Found"
+#define HTTP_SEE_OTHER_T			"See Other"
+#define HTTP_NOT_MODIFIED_T			"Not Modified"
+#define HTTP_USE_PROXY_T			"Use Proxy"
+#define HTTP_TEMPORARY_REDIRECT_T		"Temporary Redirect"
+#define HTTP_BAD_REQUEST_T			"Bad Request"
+#define HTTP_UNAUTHORIZED_T			"Unauthorized"
+#define HTTP_PAYMENT_REQUIRED_T			"Payment Required"
+#define HTTP_FORBIDDEN_T			"Forbidden"
+#define HTTP_NOT_FOUND_T			"Not Found"
+#define HTTP_METHOD_NOT_ALLOWED_T		"Method Not Allowed"
+#define HTTP_NOT_ACCEPTABLE_T			"Not Acceptable"
+#define HTTP_PROXY_AUTHENTICATION_REQUIRED_T	"Proxy Authentication Required"
+#define HTTP_REQUEST_TIMEOUT_T			"Request Timeout"
+#define HTTP_CONFLICT_T				"Conflict"
+#define HTTP_GONE_T				"Gone"
+#define HTTP_LENGTH_REQUIRED_T			"Length Request"
+#define HTTP_PRECONDITION_FAILED_T		"Precondition Failed"
+#define HTTP_REQUEST_ENTITY_TOO_LARGE_T		"Request Entity Too Large"
+#define HTTP_URI_TOO_LONG_T			"Request URI Too Long"
+#define HTTP_UNSUPPORTED_MEDIA_TYPE_T		"Unsupported Media Type"
+#define HTTP_REQUESTED_RANGE_NOT_SATISFIABLE_T	"Requested Range Not Satisfiable"
+#define HTTP_EXPECTATION_FAILED_T		"Expectation Failed"
+#define HTTP_INTERNAL_SERVER_ERROR_T		"Internal Server Error"
+#define HTTP_NOT_IMPLEMENTED_T			"Not Implemented"
+#define HTTP_BAD_GATEWAY_T			"Bad Gateway"
+#define HTTP_SERVICE_UNAVAILABLE_T		"Service Unavailable"
+#define HTTP_GATEWAY_TIMEOUT_T			"Gateway Timeout"
+#define HTTP_VERSION_NOT_SUPPORTED_T		"HTTP Version Not Supported"
 
 #define FASTERHTTP_ERROR_ALLOC				(-HTTP_INTERNAL_SERVER_ERROR*100)-11
 #define FASTERHTTP_ERROR_PARAMTER			(-HTTP_INTERNAL_SERVER_ERROR*100)-12
@@ -199,9 +240,10 @@ char *strcasestr(const char *haystack, const char *needle);
 #define FASTERHTTP_INFO_TCP_CLOSE			200
 #define FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER		100
 #define FASTERHTTP_ERROR_METHOD_INVALID			(-HTTP_NOT_IMPLEMENTED*100)
-#define FASTERHTTP_ERROR_VERSION_NOT_SUPPORTED		(-HTTP_HTTP_VERSION_NOT_SUPPORTED*100)
+#define FASTERHTTP_ERROR_VERSION_NOT_SUPPORTED		(-HTTP_VERSION_NOT_SUPPORTED*100)
 #define FASTERHTTP_ERROR_HTTP_HEADERSTARTLINE_INVALID	(-HTTP_BAD_REQUEST*100)-51
 #define FASTERHTTP_ERROR_HTTP_HEADER_INVALID		(-HTTP_BAD_REQUEST*100)-52
+#define FASTERHTTP_ERROR_HTTP_TRUNCATE			(-HTTP_BAD_REQUEST*100)-61
 #define FASTERHTTP_ERROR_ZLIB__				(-HTTP_INTERNAL_SERVER_ERROR*100)
 
 #define FASTERHTTP_TIMEOUT_DEFAULT			60
@@ -280,6 +322,10 @@ _WINDLL_FUNC struct HttpEnv *CreateHttpEnv();
 _WINDLL_FUNC void ResetHttpEnv( struct HttpEnv *e );
 _WINDLL_FUNC void DestroyHttpEnv( struct HttpEnv *e );
 
+_WINDLL_FUNC void ResetAllHttpStatus();
+_WINDLL_FUNC void SetHttpStatus( int status_code , char *status_code_s , char *status_text );
+_WINDLL_FUNC void GetHttpStatus( int status_code , char **pp_status_code_s , char **pp_status_text );
+
 /* properties */
 _WINDLL_FUNC void SetHttpTimeout( struct HttpEnv *e , long timeout );
 _WINDLL_FUNC struct timeval *GetHttpElapse( struct HttpEnv *e );
@@ -325,7 +371,7 @@ _WINDLL_FUNC int ReceiveHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e
 
 /* http server api */
 _WINDLL_FUNC int ReceiveHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e );
-_WINDLL_FUNC int FormatHttpResponseStartLine( int status_code , struct HttpEnv *e );
+_WINDLL_FUNC int FormatHttpResponseStartLine( int status_code , struct HttpEnv *e , int fill_body_with_status_flag );
 _WINDLL_FUNC int FormatHttpResponseLength( struct HttpEnv *e );
 _WINDLL_FUNC int SendHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e );
 _WINDLL_FUNC int CheckHttpKeepAlive( struct HttpEnv *e );

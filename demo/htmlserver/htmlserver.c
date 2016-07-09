@@ -39,7 +39,7 @@ static int ProcessHttpRequest( struct HttpEnv *e , int sock , char *wwwroot )
 	
 	nret = stat( pathfilename , & st ) ;
 	if( nret == -1 )
-		return FASTERHTTP_ERROR_FILE_NOT_FOUND;
+		return HTTP_NOT_FOUND;
 	filesize = st.st_size ;
 	
 	b = GetHttpResponseBuffer(e) ;
@@ -50,18 +50,18 @@ static int ProcessHttpRequest( struct HttpEnv *e , int sock , char *wwwroot )
 					"\r\n"
 					, filesize ) ;
 	if( nret )
-		return nret;
+		return HTTP_INTERNAL_SERVER_ERROR;
 	
 	nret = StrcatHttpBufferFromFile( b , pathfilename , &filesize ) ;
 	if( nret )
-		return nret;
+		return HTTP_INTERNAL_SERVER_ERROR;
 	
 	socklen = sizeof(struct sockaddr) ;
 	nret = getpeername( sock , (struct sockaddr *) & client_sockaddr , & socklen ) ;
 	if( nret )
 	{
 		printf( "getpeername failed , errno[%d]\n" , errno );
-		return -1;
+		return HTTP_INTERNAL_SERVER_ERROR;
 	}
 	memset( client_ip , 0x00 , sizeof(client_ip) );
 	inet_ntop( AF_INET , &(client_sockaddr.sin_addr) , client_ip , sizeof(client_ip) );
@@ -72,7 +72,7 @@ static int ProcessHttpRequest( struct HttpEnv *e , int sock , char *wwwroot )
 	if( nret )
 	{
 		printf( "getsockname failed , errno[%d]\n" , errno );
-		return -1;
+		return HTTP_INTERNAL_SERVER_ERROR;
 	}
 	memset( server_ip , 0x00 , sizeof(server_ip) );
 	inet_ntop( AF_INET , &(server_sockaddr.sin_addr) , server_ip , sizeof(server_ip) );
@@ -125,7 +125,7 @@ static int OnAcceptingSocket( int epoll_fd , int listen_sock )
 	}
 	
 	SetHttpTimeout( e , 120 );
-	EnableHttpResponseCompressing( e , 1 );
+	//EnableHttpResponseCompressing( e , 1 );
 	
 	memset( & event , 0x00 , sizeof(struct epoll_event) );
 	event.events = EPOLLIN | EPOLLERR ;
@@ -168,17 +168,10 @@ static int OnReceivingSocket( int epoll_fd , int accept_sock , struct HttpEnv *e
 		{
 			ErrorLog( __FILE__ , __LINE__ , "ReceiveHttpRequestNonblock failed[%d] , errno[%d]" , nret , errno );
 			
-			nret = FormatHttpResponseStartLine( abs(nret)/1000 , e ) ;
+			nret = FormatHttpResponseStartLine( abs(nret)/1000 , e , 1 ) ;
 			if( nret )
 			{
 				ErrorLog( __FILE__ , __LINE__ , "FormatHttpResponseStartLine failed[%d] , errno[%d]" , nret , errno );
-				return -2;
-			}
-			
-			nret = StrcatHttpBuffer( GetHttpResponseBuffer(e) , HTTP_RETURN_NEWLINE ) ;
-			if( nret )
-			{
-				ErrorLog( __FILE__ , __LINE__ , "StrcatHttpBuffer failed[%d] , errno[%d]" , nret , errno );
 				return -2;
 			}
 			
@@ -190,7 +183,7 @@ static int OnReceivingSocket( int epoll_fd , int accept_sock , struct HttpEnv *e
 		nret = ProcessHttpRequest( e , GetParserCustomIntData(e) , wwwroot ) ;
 		if( nret )
 		{
-			nret = FormatHttpResponseStartLine( HTTP_SERVICE_UNAVAILABLE , e ) ;
+			nret = FormatHttpResponseStartLine( nret , e , 1 ) ;
 			if( nret )
 			{
 				ErrorLog( __FILE__ , __LINE__ , "FormatHttpResponseStartLine failed[%d] , errno[%d]" , nret , errno );
@@ -461,6 +454,9 @@ int main( int argc , char *argv[] )
 {
 	SetLogFile( "%s/log/htmlserver.log" , getenv("HOME") );
 	SetLogLevel( LOGLEVEL_INFO );
+	
+	ResetAllHttpStatus();
+	SetHttpStatus( HTTP_NOT_FOUND , HTTP_NOT_FOUND_S , "Custem Not Found Text" );
 	
 	if( argc == 1 + 2 )
 	{
