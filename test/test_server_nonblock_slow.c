@@ -58,7 +58,6 @@ int test_server_nonblock_slow()
 	int			onoff ;
 	
 	struct HttpEnv		*e = NULL ;
-	fd_set			read_fds , write_fds ;
 	
 	int			nret = 0 ;
 	
@@ -101,6 +100,8 @@ int test_server_nonblock_slow()
 			break;
 		}
 		
+		SetHttpNonblock( accept_sock );
+		
 		e = CreateHttpEnv();
 		if( e == NULL )
 		{
@@ -113,115 +114,73 @@ int test_server_nonblock_slow()
 		
 		while(1)
 		{
-			FD_ZERO( & read_fds );
-			FD_SET( accept_sock , & read_fds );
-			
-			nret = select( accept_sock+1 , & read_fds , NULL , NULL , GetHttpElapse(e) ) ;
-			if( nret == 0 )
+			while(1)
 			{
-				printf( "select receive timeout , errno[%d]\n" , errno );
-				nret = FASTERHTTP_ERROR_TCP_CLOSE ;
-				break;
-			}
-			else if( nret != 1 )
-			{
-				printf( "select receive failed , errno[%d]\n" , errno );
-				nret = FASTERHTTP_ERROR_TCP_CLOSE ;
-				break;
+				nret = ReceiveHttpRequestNonblock1( accept_sock , NULL , e ) ;
+				if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
+				{
+					;
+				}
+				else
+				{
+					break;
+				}
 			}
 			
-			nret = ReceiveHttpRequestNonblock1( accept_sock , NULL , e ) ;
-			if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
+			if( nret == FASTERHTTP_ERROR_TCP_CLOSE )
 			{
-				;
+				break;
+			}
+			else if( nret == FASTERHTTP_INFO_TCP_CLOSE )
+			{
+				break;
 			}
 			else if( nret )
 			{
 				printf( "ReceiveHttpRequestNonblock1 failed[%d]\n" , nret );
-				break;
+				
+				nret = FormatHttpResponseStartLine( abs(nret)/1000 , e , 1 ) ;
+				if( nret )
+					break;
 			}
 			else
 			{
-				break;
-			}
-		}
-		
-		if( nret == FASTERHTTP_ERROR_TCP_CLOSE )
-		{
-			DestroyHttpEnv( e );
-			CLOSESOCKET( accept_sock );
-			continue;
-		}
-		else if( nret == FASTERHTTP_INFO_TCP_CLOSE )
-		{
-			DestroyHttpEnv( e );
-			CLOSESOCKET( accept_sock );
-			continue;
-		}
-		else if( nret )
-		{
-			nret = FormatHttpResponseStartLine( abs(nret)/1000 , e , 1 ) ;
-			if( nret )
-			{
-				DestroyHttpEnv( e );
-				CLOSESOCKET( accept_sock );
-				continue;
-			}
-		}
-		else
-		{
-			nret = FormatHttpResponseStartLine( HTTP_OK , e , 0 ) ;
-			if( nret )
-			{
-				DestroyHttpEnv( e );
-				CLOSESOCKET( accept_sock );
-				continue;
-			}
-			
-			nret = ProcessHttpRequest( e , (void*)(&accept_sock) ) ;
-			if( nret != HTTP_OK )
-			{
-				nret = FormatHttpResponseStartLine( nret , e , 1 ) ;
+				nret = FormatHttpResponseStartLine( HTTP_OK , e , 0 ) ;
 				if( nret )
+					break;
+				
+				nret = ProcessHttpRequest( e , (void*)(&accept_sock) ) ;
+				if( nret != HTTP_OK )
 				{
-					DestroyHttpEnv( e );
-					CLOSESOCKET( accept_sock );
-					continue;
+					nret = FormatHttpResponseStartLine( nret , e , 1 ) ;
+					if( nret )
+						break;
 				}
 			}
-		}
-		
-		while(1)
-		{
-			FD_ZERO( & write_fds );
-			FD_SET( accept_sock , & write_fds );
 			
-			nret = select( accept_sock+1 , NULL , & write_fds , NULL , GetHttpElapse(e) ) ;
-			if( nret == 0 )
+			while(1)
 			{
-				printf( "select send timeout , errno[%d]\n" , errno );
-				break;
-			}
-			else if( nret != 1 )
-			{
-				printf( "select send failed , errno[%d]\n" , errno );
-				break;
+				nret = SendHttpResponseNonblock( accept_sock , NULL , e ) ;
+				if( nret == FASTERHTTP_INFO_TCP_SEND_WOULDBLOCK )
+				{
+					;
+				}
+				else
+				{
+					break;
+				}
 			}
 			
-			nret = SendHttpResponseNonblock( accept_sock , NULL , e ) ;
-			if( nret == FASTERHTTP_INFO_TCP_SEND_WOULDBLOCK )
-			{
-				;
-			}
-			else if( nret )
+			if( nret )
 			{
 				printf( "SendHttpResponseNonblock failed[%d]\n" , nret );
 				break;
 			}
-			else
-			{
+			
+			if( ! CheckHttpKeepAlive(e) )
 				break;
-			}
+			
+			ResetHttpEnv(e);
 		}
 		
 		DestroyHttpEnv( e );

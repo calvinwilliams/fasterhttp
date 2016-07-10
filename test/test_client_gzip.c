@@ -47,7 +47,7 @@ static int TestParseHttpRequest( struct HttpEnv *e , char *str )
 	}
 	else
 	{
-		if( GetHttpHeaderCount( e ) > 0 )
+		if( CountHttpHeaders( e ) > 0 )
 		{
 			struct HttpHeader *p_header = NULL ;
 			

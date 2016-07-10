@@ -8,7 +8,6 @@ static int TestParseHttpRequest( struct HttpEnv *e , char *str )
 	struct sockaddr_in	connect_addr ;
 	
 	struct HttpBuffer	*b = NULL ;
-	fd_set			read_fds , write_fds ;
 	
 	int			nret = 0 ;
 	
@@ -33,6 +32,8 @@ static int TestParseHttpRequest( struct HttpEnv *e , char *str )
 		return -1;
 	}
 	
+	SetHttpNonblock( connect_sock );
+	
 	b = GetHttpRequestBuffer(e) ;
 	nret = StrcatHttpBuffer( b , str ) ;
 	if( nret )
@@ -43,23 +44,6 @@ static int TestParseHttpRequest( struct HttpEnv *e , char *str )
 	
 	while(1)
 	{
-		FD_ZERO( & write_fds );
-		FD_SET( connect_sock , & write_fds );
-		
-		nret = select( connect_sock+1 , NULL , & write_fds , NULL , GetHttpElapse(e) ) ;
-		if( nret == 0 )
-		{
-			printf( "select send timeout , errno[%d]\n" , errno );
-			CLOSESOCKET( connect_sock );
-			return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE_TIMEOUT;
-		}
-		else if( nret != 1 )
-		{
-			printf( "select send failed , errno[%d]\n" , errno );
-			CLOSESOCKET( connect_sock );
-			return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE;
-		}
-		
 		nret = SendHttpRequestNonblock( connect_sock , NULL , e ) ;
 		if( nret == FASTERHTTP_INFO_TCP_SEND_WOULDBLOCK )
 		{
@@ -79,23 +63,6 @@ static int TestParseHttpRequest( struct HttpEnv *e , char *str )
 	
 	while(1)
 	{
-		FD_ZERO( & read_fds );
-		FD_SET( connect_sock , & read_fds );
-		
-		nret = select( connect_sock+1 , & read_fds , NULL , NULL , GetHttpElapse(e) ) ;
-		if( nret == 0 )
-		{
-			printf( "select receive timeout , errno[%d]\n" , errno );
-			CLOSESOCKET( connect_sock );
-			return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE_TIMEOUT;
-		}
-		else if( nret != 1 )
-		{
-			printf( "select receive failed , errno[%d]\n" , errno );
-			CLOSESOCKET( connect_sock );
-			return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE;
-		}
-		
 		nret = ReceiveHttpResponseNonblock1( connect_sock , NULL , e ) ;
 		if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
 		{
@@ -103,7 +70,6 @@ static int TestParseHttpRequest( struct HttpEnv *e , char *str )
 		}
 		else if( nret )
 		{
-			struct HttpBuffer	*b = GetHttpResponseBuffer(e) ;
 			printf( "ReceiveHttpResponseNonblock1 failed[%d]\n" , nret );
 			CLOSESOCKET( connect_sock );
 			return nret;
