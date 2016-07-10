@@ -124,7 +124,7 @@ int test_client_stickrequests()
 		}
 		else
 		{
-			if( GetHttpHeaderCount( e ) > 0 )
+			if( CountHttpHeaders( e ) > 0 )
 			{
 				struct HttpHeader *p_header = NULL ;
 				

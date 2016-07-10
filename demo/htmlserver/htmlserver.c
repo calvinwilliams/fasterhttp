@@ -124,7 +124,9 @@ static int OnAcceptingSocket( int epoll_fd , int listen_sock )
 	}
 	
 	SetHttpTimeout( e , 120 );
-	//EnableHttpResponseCompressing( e , 1 );
+	/*
+ 	EnableHttpResponseCompressing( e , 1 );
+ 	*/
 	
 	memset( & event , 0x00 , sizeof(struct epoll_event) );
 	event.events = EPOLLIN | EPOLLERR ;
@@ -179,8 +181,15 @@ static int OnReceivingSocket( int epoll_fd , int accept_sock , struct HttpEnv *e
 	}
 	else
 	{
-		nret = ProcessHttpRequest( e , GetParserCustomIntData(e) , wwwroot ) ;
+		nret = FormatHttpResponseStartLine( HTTP_OK , e , 0 ) ;
 		if( nret )
+		{
+			ErrorLog( __FILE__ , __LINE__ , "FormatHttpResponseStartLine failed[%d] , errno[%d]" , nret , errno );
+			return -2;
+		}
+		
+		nret = ProcessHttpRequest( e , GetParserCustomIntData(e) , wwwroot ) ;
+		if( nret != HTTP_OK )
 		{
 			nret = FormatHttpResponseStartLine( nret , e , 1 ) ;
 			if( nret )

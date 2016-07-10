@@ -103,7 +103,6 @@ static int TestParseHttpRequest( struct HttpEnv *e , char *str )
 		}
 		else if( nret )
 		{
-			struct HttpBuffer	*b = GetHttpResponseBuffer(e) ;
 			printf( "ReceiveHttpResponseNonblock1 failed[%d]\n" , nret );
 			CLOSESOCKET( connect_sock );
 			return nret;
