@@ -43,9 +43,8 @@ static int ProcessHttpRequest( struct HttpEnv *e , int sock , char *wwwroot )
 	filesize = st.st_size ;
 	
 	b = GetHttpResponseBuffer(e) ;
-	nret = StrcatfHttpBuffer( b ,	"HTTP/1.1 200 OK\r\n"
-					"Server: htmlserver/1.0.0\r\n"
-					"Content-Type: text/html; charset=UTF-8\r\n"
+	nret = StrcatfHttpBuffer( b ,	"Server: htmlserver/1.0.0\r\n"
+					"Content-Type: text/html\r\n"
 					"Content-Length: %d\r\n"
 					"\r\n"
 					, filesize ) ;
@@ -85,7 +84,7 @@ static int ProcessHttpRequest( struct HttpEnv *e , int sock , char *wwwroot )
 		, GetHttpHeaderLen_VERSION(e) , GetHttpHeaderPtr_VERSION(e,NULL)
 		);
 	
-	return 0;
+	return HTTP_OK;
 }
 
 static int OnAcceptingSocket( int epoll_fd , int listen_sock )
@@ -247,7 +246,7 @@ static int OnSendingSocket( int epoll_fd , int accept_sock , struct HttpEnv *e )
 	return 0;
 }
 
-static int htmlserver( short port , char *wwwroot )
+static int htmlserver( int port , char *wwwroot )
 {
 	int			epoll_fd ;
 	struct epoll_event	event , *p_event = NULL ;
@@ -291,7 +290,7 @@ static int htmlserver( short port , char *wwwroot )
 	memset( & listen_addr , 0x00 , sizeof(struct sockaddr_in) ) ;
 	listen_addr.sin_family = AF_INET ;
 	listen_addr.sin_addr.s_addr = INADDR_ANY ;
-	listen_addr.sin_port = htons( (unsigned short)9527 ) ;
+	listen_addr.sin_port = htons( (unsigned short)port ) ;
 	
 	nret = bind( listen_sock , (struct sockaddr *) & listen_addr , sizeof(struct sockaddr) ) ;
 	if( nret == -1 )
@@ -460,7 +459,7 @@ int main( int argc , char *argv[] )
 	
 	if( argc == 1 + 2 )
 	{
-		return -htmlserver( (short)atoi(argv[1]) , argv[2] );
+		return -htmlserver( atoi(argv[1]) , argv[2] );
 	}
 	else
 	{

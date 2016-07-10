@@ -33,7 +33,7 @@ int ProcessHttpRequest( struct HttpEnv *e , void *p )
 	printf( "HTTP BODY    [%.*s]\n" , GetHttpBodyLen(e) , GetHttpBodyPtr(e,NULL) );
 	
 	b = GetHttpResponseBuffer(e) ;
-	nret = StrcatHttpBuffer( b , "HTTP/1.1 200 OK\r\n"
+	nret = StrcatHttpBuffer( b ,	"Content-Type: text/html\r\n"
 					"Content-Length: 17\r\n"
 					"\r\n"
 					"hello fasterhttp!" ) ;
@@ -43,12 +43,10 @@ int ProcessHttpRequest( struct HttpEnv *e , void *p )
 		return HTTP_INTERNAL_SERVER_ERROR;
 	}
 	
-	return 0;
+	return HTTP_OK;
 }
 
-int ReceiveHttpRequestNonblock1( SOCKET sock , SSL *ssl , struct HttpEnv *e );
-
-int test_server_nonblock_slow_slow()
+int test_server_nonblock()
 {
 	SOCKET			listen_sock ;
 	struct sockaddr_in	listen_addr ;
@@ -62,13 +60,6 @@ int test_server_nonblock_slow_slow()
 	
 	int			nret = 0 ;
 	
-	e = CreateHttpEnv();
-	if( e == NULL )
-	{
-		printf( "CreateHttpEnv failed , errno[%d]\n" , errno );
-		return -1;
-	}
-	
 	listen_sock = socket( AF_INET , SOCK_STREAM , IPPROTO_TCP ) ;
 	if( listen_sock == -1 )
 	{
@@ -81,7 +72,7 @@ int test_server_nonblock_slow_slow()
 	
 	memset( & listen_addr , 0x00 , sizeof(struct sockaddr_in) );
 	listen_addr.sin_family = AF_INET;
-	listen_addr.sin_addr.s_addr = inet_addr( "127.0.0.1" );
+	listen_addr.sin_addr.s_addr = INADDR_ANY ;
 	listen_addr.sin_port = htons( (unsigned short)9527 );
 	
 	nret = bind( listen_sock , (struct sockaddr *) & listen_addr , sizeof(struct sockaddr) ) ;
@@ -108,13 +99,20 @@ int test_server_nonblock_slow_slow()
 			break;
 		}
 		
-		ResetHttpEnv( e );
+		e = CreateHttpEnv();
+		if( e == NULL )
+		{
+			printf( "CreateHttpEnv failed , errno[%d]\n" , errno );
+			CLOSESOCKET( accept_sock );
+			return -1;
+		}
+		
+		EnableHttpResponseCompressing( e , 1 );
 		
 		while(1)
 		{
 			FD_ZERO( & read_fds );
 			FD_SET( accept_sock , & read_fds );
-			
 			nret = select( accept_sock+1 , & read_fds , NULL , NULL , GetHttpElapse(e) ) ;
 			if( nret == 0 )
 			{
@@ -147,11 +145,13 @@ int test_server_nonblock_slow_slow()
 		
 		if( nret == FASTERHTTP_ERROR_TCP_CLOSE )
 		{
+			DestroyHttpEnv( e );
 			CLOSESOCKET( accept_sock );
 			continue;
 		}
 		else if( nret == FASTERHTTP_INFO_TCP_CLOSE )
 		{
+			DestroyHttpEnv( e );
 			CLOSESOCKET( accept_sock );
 			continue;
 		}
@@ -160,18 +160,28 @@ int test_server_nonblock_slow_slow()
 			nret = FormatHttpResponseStartLine( abs(nret)/1000 , e , 1 ) ;
 			if( nret )
 			{
+				DestroyHttpEnv( e );
 				CLOSESOCKET( accept_sock );
 				continue;
 			}
 		}
 		else
 		{
-			nret = ProcessHttpRequest( e , (void*)(&accept_sock) ) ;
+			nret = FormatHttpResponseStartLine( HTTP_OK , e , 0 ) ;
 			if( nret )
+			{
+				DestroyHttpEnv( e );
+				CLOSESOCKET( accept_sock );
+				continue;
+			}
+			
+			nret = ProcessHttpRequest( e , (void*)(&accept_sock) ) ;
+			if( nret != HTTP_OK )
 			{
 				nret = FormatHttpResponseStartLine( nret , e , 1 ) ;
 				if( nret )
 				{
+					DestroyHttpEnv( e );
 					CLOSESOCKET( accept_sock );
 					continue;
 				}
@@ -182,18 +192,15 @@ int test_server_nonblock_slow_slow()
 		{
 			FD_ZERO( & write_fds );
 			FD_SET( accept_sock , & write_fds );
-			
 			nret = select( accept_sock+1 , NULL , & write_fds , NULL , GetHttpElapse(e) ) ;
 			if( nret == 0 )
 			{
 				printf( "select send timeout , errno[%d]\n" , errno );
-				CLOSESOCKET( accept_sock );
 				break;
 			}
 			else if( nret != 1 )
 			{
 				printf( "select send failed , errno[%d]\n" , errno );
-				CLOSESOCKET( accept_sock );
 				break;
 			}
 			
@@ -205,7 +212,6 @@ int test_server_nonblock_slow_slow()
 			else if( nret )
 			{
 				printf( "SendHttpResponseNonblock failed[%d]\n" , nret );
-				CLOSESOCKET( accept_sock );
 				break;
 			}
 			else
@@ -214,12 +220,11 @@ int test_server_nonblock_slow_slow()
 			}
 		}
 		
+		DestroyHttpEnv( e );
 		CLOSESOCKET( accept_sock );
 	}
 	
 	CLOSESOCKET( listen_sock );
-	
-	DestroyHttpEnv( e );
 	
 	return 0;
 }
@@ -240,7 +245,7 @@ int main()
 	}
 #endif
 	
-	nret = test_server_nonblock_slow_slow() ;
+	nret = test_server_nonblock() ;
 
 #if ( defined _WIN32 )
 	WSACleanup();

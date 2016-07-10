@@ -23,7 +23,7 @@ static int TestParseHttpRequest( struct HttpEnv *e , char *format , ... )
 	nret = ParseHttpRequest( e ) ;
 	if( nret == 0 )
 	{
-		if( GetHttpHeaderCount( e ) > 0 )
+		if( CountHttpHeaders( e ) > 0 )
 		{
 			struct HttpHeader *p_header = NULL ;
 			
@@ -66,7 +66,7 @@ static int TestParseHttpResponse( struct HttpEnv *e , char *format , ... )
 	nret = ParseHttpResponse( e ) ;
 	if( nret == 0 )
 	{
-		if( GetHttpHeaderCount( e ) > 0 )
+		if( CountHttpHeaders( e ) > 0 )
 		{
 			struct HttpHeader *p_header = NULL ;
 			

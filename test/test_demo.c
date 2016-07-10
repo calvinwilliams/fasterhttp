@@ -38,7 +38,7 @@ static int test_demo()
 	{
 		printf( "%s:%d | test_demo ok[%d]\n" , __FILE__ , __LINE__ , nret );
 		
-		if( GetHttpHeaderCount( e ) > 0 )
+		if( CountHttpHeaders( e ) > 0 )
 		{
 			struct HttpHeader *p_header = NULL ;
 			

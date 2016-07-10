@@ -68,7 +68,7 @@ static int TestParseHttpRequest( struct HttpEnv *e , char *str )
 	return 0;
 }
 
-int test_client_block()
+int test_client_gzip()
 {
 	struct HttpEnv		*e = NULL ;
 	
@@ -150,7 +150,7 @@ int main()
 	}
 #endif
 	
-	nret = test_client_block() ;
+	nret = test_client_gzip() ;
 
 #if ( defined _WIN32 )
 	WSACleanup();

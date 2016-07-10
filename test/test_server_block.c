@@ -33,7 +33,7 @@ int ProcessHttpRequest( struct HttpEnv *e , void *p )
 	printf( "HTTP BODY    [%.*s]\n" , GetHttpBodyLen(e) , GetHttpBodyPtr(e,NULL) );
 	
 	b = GetHttpResponseBuffer(e) ;
-	nret = StrcatHttpBuffer( b , "HTTP/1.1 200 OK\r\n"
+	nret = StrcatHttpBuffer( b ,	"Content-Type: text/html\r\n"
 					"Content-Length: 17\r\n"
 					"\r\n"
 					"hello fasterhttp!" ) ;
@@ -43,7 +43,7 @@ int ProcessHttpRequest( struct HttpEnv *e , void *p )
 		return HTTP_INTERNAL_SERVER_ERROR;
 	}
 	
-	return 0;
+	return HTTP_OK;
 }
 
 int test_server_block()
@@ -59,13 +59,6 @@ int test_server_block()
 	
 	int			nret = 0 ;
 	
-	e = CreateHttpEnv();
-	if( e == NULL )
-	{
-		printf( "CreateHttpEnv failed , errno[%d]\n" , errno );
-		return -1;
-	}
-	
 	listen_sock = socket( AF_INET , SOCK_STREAM , IPPROTO_TCP ) ;
 	if( listen_sock == -1 )
 	{
@@ -78,7 +71,7 @@ int test_server_block()
 	
 	memset( & listen_addr , 0x00 , sizeof(struct sockaddr_in) );
 	listen_addr.sin_family = AF_INET;
-	listen_addr.sin_addr.s_addr = inet_addr( "127.0.0.1" );
+	listen_addr.sin_addr.s_addr = INADDR_ANY ;
 	listen_addr.sin_port = htons( (unsigned short)9527 );
 	
 	nret = bind( listen_sock , (struct sockaddr *) & listen_addr , sizeof(struct sockaddr) ) ;
@@ -105,22 +98,30 @@ int test_server_block()
 			break;
 		}
 		
-		ResetHttpEnv( e );
+		e = CreateHttpEnv();
+		if( e == NULL )
+		{
+			printf( "CreateHttpEnv failed , errno[%d]\n" , errno );
+			CLOSESOCKET( accept_sock );
+			return -1;
+		}
 		
-		nret = ResponseHttp( accept_sock , NULL , e , & ProcessHttpRequest , (void*)(&accept_sock) ) ;
+		EnableHttpResponseCompressing( e , 1 );
+		
+		nret = ResponseAllHttp( accept_sock , NULL , e , & ProcessHttpRequest , (void*)(&accept_sock) ) ;
 		if( nret )
 		{
 			printf( "ResponseHttp[%d]\n" , nret );
+			DestroyHttpEnv( e );
 			CLOSESOCKET( accept_sock );
 			continue;
 		}
 		
+		DestroyHttpEnv( e );
 		CLOSESOCKET( accept_sock );
 	}
 	
 	CLOSESOCKET( listen_sock );
-	
-	DestroyHttpEnv( e );
 	
 	return 0;
 }
