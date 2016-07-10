@@ -59,13 +59,6 @@ int test_server_block()
 	
 	int			nret = 0 ;
 	
-	e = CreateHttpEnv();
-	if( e == NULL )
-	{
-		printf( "CreateHttpEnv failed , errno[%d]\n" , errno );
-		return -1;
-	}
-	
 	listen_sock = socket( AF_INET , SOCK_STREAM , IPPROTO_TCP ) ;
 	if( listen_sock == -1 )
 	{
@@ -105,22 +98,30 @@ int test_server_block()
 			break;
 		}
 		
-		ResetHttpEnv( e );
+		e = CreateHttpEnv();
+		if( e == NULL )
+		{
+			printf( "CreateHttpEnv failed , errno[%d]\n" , errno );
+			CLOSESOCKET( accept_sock );
+			return -1;
+		}
+		
+		EnableHttpResponseCompressing( e , 1 );
 		
 		nret = ResponseAllHttp( accept_sock , NULL , e , & ProcessHttpRequest , (void*)(&accept_sock) ) ;
 		if( nret )
 		{
 			printf( "ResponseHttp[%d]\n" , nret );
+			DestroyHttpEnv( e );
 			CLOSESOCKET( accept_sock );
 			continue;
 		}
 		
+		DestroyHttpEnv( e );
 		CLOSESOCKET( accept_sock );
 	}
 	
 	CLOSESOCKET( listen_sock );
-	
-	DestroyHttpEnv( e );
 	
 	return 0;
 }

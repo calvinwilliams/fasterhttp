@@ -137,30 +137,17 @@ struct HttpBuffer *GetHttpResponseBuffer( struct HttpEnv *e )
 	return &(e->response_buffer);
 }
 
-char *GetHttpBufferBase( struct HttpBuffer *b )
+char *GetHttpBufferBase( struct HttpBuffer *b , int *p_data_len )
 {
+	if( p_data_len )
+		(*p_data_len) = b->fill_ptr - b->base ;
+	
 	return b->base;
 }
 
 int GetHttpBufferLength( struct HttpBuffer *b )
 {
 	return b->fill_ptr-b->base;
-}
-
-char *GetHttpBufferFillPtr( struct HttpBuffer *b )
-{
-	return b->fill_ptr;
-}
-
-int GetHttpBufferRemainLength( struct HttpBuffer *b )
-{
-	return b->buf_size-1-(b->fill_ptr-b->base);
-}
-
-void OffsetHttpBufferFillPtr( struct HttpBuffer *b , int len )
-{
-	b->fill_ptr += len ;
-	return;
 }
 
 void ReformingHttpBuffer( struct HttpBuffer *b )
@@ -186,9 +173,6 @@ int ReallocHttpBuffer( struct HttpBuffer *b , long new_buf_size )
 	char	*new_base = NULL ;
 	int	fill_len = b->fill_ptr - b->base ;
 	int	process_len = b->process_ptr - b->base ;
-	
-	if( b->ref_flag == 1 )
-		return FASTERHTTP_ERROR_USING;
 	
 	if( new_buf_size == -1 )
 	{
@@ -405,7 +389,7 @@ int StrcatHttpBufferFromFile( struct HttpBuffer *b , char *pathfilename , int *p
 	return 0;
 }
 
-int MemcatHttpBuffer( struct HttpBuffer *b , char *base , long len )
+int MemcatHttpBuffer( struct HttpBuffer *b , char *base , int len )
 {
 	int		nret = 0 ;
 	
@@ -422,7 +406,7 @@ int MemcatHttpBuffer( struct HttpBuffer *b , char *base , long len )
 	return 0;
 }
 
-void SetHttpBufferPtr( struct HttpBuffer *b , char *ptr , long size )
+_WINDLL_FUNC void SetHttpBufferPtr( struct HttpBuffer *b , char *ptr , long size )
 {
 	if( b->ref_flag == 0 && b->buf_size > 0 && b->base )
 	{
@@ -435,6 +419,281 @@ void SetHttpBufferPtr( struct HttpBuffer *b , char *ptr , long size )
 	b->process_ptr = b->base ;
 	
 	b->ref_flag = 1 ;
+	
+	return;
+}
+
+void ResetHttpTimeout( struct HttpEnv *e )
+{
+	e->timeout.tv_sec = e->init_timeout ;
+	e->timeout.tv_usec = 0 ;
+	
+	return;
+}
+
+void SetHttpTimeout( struct HttpEnv *e , long timeout )
+{
+	e->init_timeout = timeout ;
+	
+	ResetHttpTimeout( e );
+	
+	return;
+}
+
+struct timeval *GetHttpElapse( struct HttpEnv *e )
+{
+	return &(e->timeout);
+}
+
+void EnableHttpResponseCompressing( struct HttpEnv *e , int enable_response_compressing )
+{
+	e->enable_response_compressing = (char)enable_response_compressing ;
+	return;
+}
+
+void SetParserCustomIntData( struct HttpEnv *e , int i )
+{
+	e->i = i ;
+	return;
+}
+
+int GetParserCustomIntData( struct HttpEnv *e )
+{
+	return e->i;
+}
+
+void SetParserCustomPtrData( struct HttpEnv *e , void *ptr )
+{
+	e->ptr = ptr ;
+	return;
+}
+
+void *GetParserCustomPtrData( struct HttpEnv *e )
+{
+	return e->ptr;
+}
+
+void ResetAllHttpStatus()
+{
+	if( g_init_httpstatus == 0 )
+	{
+		SetHttpStatus( HTTP_CONTINUE , HTTP_CONTINUE_S , HTTP_CONTINUE_T );
+		SetHttpStatus( HTTP_SWITCHING_PROTOCOL , HTTP_SWITCHING_PROTOCOL_S , HTTP_SWITCHING_PROTOCOL_T );
+		SetHttpStatus( HTTP_OK , HTTP_OK_S , HTTP_OK_T );
+		SetHttpStatus( HTTP_CREATED , HTTP_CREATED_S , HTTP_CREATED_T );
+		SetHttpStatus( HTTP_ACCEPTED , HTTP_ACCEPTED_S , HTTP_ACCEPTED_T );
+		SetHttpStatus( HTTP_NON_AUTHORITATIVE_INFORMATION , HTTP_NON_AUTHORITATIVE_INFORMATION_S , HTTP_NON_AUTHORITATIVE_INFORMATION_T );
+		SetHttpStatus( HTTP_NO_CONTENT , HTTP_NO_CONTENT_S , HTTP_NO_CONTENT_T );
+		SetHttpStatus( HTTP_RESET_CONTENT , HTTP_RESET_CONTENT_S , HTTP_RESET_CONTENT_T );
+		SetHttpStatus( HTTP_PARTIAL_CONTENT , HTTP_PARTIAL_CONTENT_S , HTTP_PARTIAL_CONTENT_T );
+		SetHttpStatus( HTTP_MULTIPLE_CHOICES , HTTP_MULTIPLE_CHOICES_S , HTTP_MULTIPLE_CHOICES_T );
+		SetHttpStatus( HTTP_MOVED_PERMANNETLY , HTTP_MOVED_PERMANNETLY_S , HTTP_MOVED_PERMANNETLY_T );
+		SetHttpStatus( HTTP_FOUND , HTTP_FOUND_S , HTTP_FOUND_T );
+		SetHttpStatus( HTTP_SEE_OTHER , HTTP_SEE_OTHER_S , HTTP_SEE_OTHER_T );
+		SetHttpStatus( HTTP_NOT_MODIFIED , HTTP_NOT_MODIFIED_S , HTTP_NOT_MODIFIED_T );
+		SetHttpStatus( HTTP_USE_PROXY , HTTP_USE_PROXY_S , HTTP_USE_PROXY_T );
+		SetHttpStatus( HTTP_TEMPORARY_REDIRECT , HTTP_TEMPORARY_REDIRECT_S , HTTP_TEMPORARY_REDIRECT_T );
+		SetHttpStatus( HTTP_BAD_REQUEST , HTTP_BAD_REQUEST_S , HTTP_BAD_REQUEST_T );
+		SetHttpStatus( HTTP_UNAUTHORIZED , HTTP_UNAUTHORIZED_S , HTTP_UNAUTHORIZED_T );
+		SetHttpStatus( HTTP_PAYMENT_REQUIRED , HTTP_PAYMENT_REQUIRED_S , HTTP_PAYMENT_REQUIRED_T );
+		SetHttpStatus( HTTP_FORBIDDEN , HTTP_FORBIDDEN_S , HTTP_FORBIDDEN_T );
+		SetHttpStatus( HTTP_NOT_FOUND , HTTP_NOT_FOUND_S , HTTP_NOT_FOUND_T );
+		SetHttpStatus( HTTP_METHOD_NOT_ALLOWED , HTTP_METHOD_NOT_ALLOWED_S , HTTP_METHOD_NOT_ALLOWED_T );
+		SetHttpStatus( HTTP_NOT_ACCEPTABLE , HTTP_NOT_ACCEPTABLE_S , HTTP_NOT_ACCEPTABLE_T );
+		SetHttpStatus( HTTP_PROXY_AUTHENTICATION_REQUIRED , HTTP_PROXY_AUTHENTICATION_REQUIRED_S , HTTP_PROXY_AUTHENTICATION_REQUIRED_T );
+		SetHttpStatus( HTTP_REQUEST_TIMEOUT , HTTP_REQUEST_TIMEOUT_S , HTTP_REQUEST_TIMEOUT_T );
+		SetHttpStatus( HTTP_CONFLICT , HTTP_CONFLICT_S , HTTP_CONFLICT_T );
+		SetHttpStatus( HTTP_GONE , HTTP_GONE_S , HTTP_GONE_T );
+		SetHttpStatus( HTTP_LENGTH_REQUIRED , HTTP_LENGTH_REQUIRED_S , HTTP_LENGTH_REQUIRED_T );
+		SetHttpStatus( HTTP_PRECONDITION_FAILED , HTTP_PRECONDITION_FAILED_S , HTTP_PRECONDITION_FAILED_T );
+		SetHttpStatus( HTTP_REQUEST_ENTITY_TOO_LARGE , HTTP_REQUEST_ENTITY_TOO_LARGE_S , HTTP_REQUEST_ENTITY_TOO_LARGE_T );
+		SetHttpStatus( HTTP_URI_TOO_LONG , HTTP_URI_TOO_LONG_S , HTTP_URI_TOO_LONG_T );
+		SetHttpStatus( HTTP_UNSUPPORTED_MEDIA_TYPE , HTTP_UNSUPPORTED_MEDIA_TYPE_S , HTTP_UNSUPPORTED_MEDIA_TYPE_T );
+		SetHttpStatus( HTTP_REQUESTED_RANGE_NOT_SATISFIABLE , HTTP_REQUESTED_RANGE_NOT_SATISFIABLE_S , HTTP_REQUESTED_RANGE_NOT_SATISFIABLE_T );
+		SetHttpStatus( HTTP_EXPECTATION_FAILED , HTTP_EXPECTATION_FAILED_S , HTTP_EXPECTATION_FAILED_T );
+		SetHttpStatus( HTTP_INTERNAL_SERVER_ERROR , HTTP_INTERNAL_SERVER_ERROR_S , HTTP_INTERNAL_SERVER_ERROR_T );
+		SetHttpStatus( HTTP_NOT_IMPLEMENTED , HTTP_NOT_IMPLEMENTED_S , HTTP_NOT_IMPLEMENTED_T );
+		SetHttpStatus( HTTP_BAD_GATEWAY , HTTP_BAD_GATEWAY_S , HTTP_BAD_GATEWAY_T );
+		SetHttpStatus( HTTP_SERVICE_UNAVAILABLE , HTTP_SERVICE_UNAVAILABLE_S , HTTP_SERVICE_UNAVAILABLE_T );
+		SetHttpStatus( HTTP_GATEWAY_TIMEOUT , HTTP_GATEWAY_TIMEOUT_S , HTTP_GATEWAY_TIMEOUT_T );
+		SetHttpStatus( HTTP_VERSION_NOT_SUPPORTED , HTTP_VERSION_NOT_SUPPORTED_S , HTTP_VERSION_NOT_SUPPORTED_T );
+		
+		g_init_httpstatus = 1 ;
+	}
+	
+	return;
+}
+
+void SetHttpStatus( int status_code , char *status_code_s , char *status_text )
+{
+	g_httpstatus_array[status_code].STATUS = status_code ;
+	g_httpstatus_array[status_code].STATUS_S = status_code_s ;
+	g_httpstatus_array[status_code].STATUS_T = status_text ;
+	return;
+}
+
+void GetHttpStatus( int status_code , char **pp_status_code_s , char **pp_status_text )
+{
+	if( pp_status_code_s )
+		(*pp_status_code_s) = g_httpstatus_array[status_code].STATUS_S ;
+	if( pp_status_text )
+		(*pp_status_text) = g_httpstatus_array[status_code].STATUS_T ;
+	return;
+}
+
+struct HttpEnv *CreateHttpEnv()
+{
+	struct HttpEnv	*e = NULL ;
+	
+	ResetAllHttpStatus();
+	
+	e = (struct HttpEnv *)malloc( sizeof(struct HttpEnv) ) ;
+	if( e == NULL )
+	{
+		DestroyHttpEnv( e );
+		return NULL;
+	}
+	memset( e , 0x00 , sizeof(struct HttpEnv) );
+	
+	SetHttpTimeout( e , FASTERHTTP_TIMEOUT_DEFAULT );
+	
+	e->request_buffer.buf_size = FASTERHTTP_REQUEST_BUFSIZE_DEFAULT ;
+	e->request_buffer.base = (char*)malloc( e->request_buffer.buf_size ) ;
+	if( e->request_buffer.base == NULL )
+	{
+		DestroyHttpEnv( e );
+		return NULL;
+	}
+	memset( e->request_buffer.base , 0x00 , sizeof(e->request_buffer.buf_size) );
+	e->request_buffer.ref_flag = 0 ;
+	e->request_buffer.fill_ptr = e->request_buffer.base ;
+	e->request_buffer.process_ptr = e->request_buffer.base ;
+	
+	e->response_buffer.buf_size = FASTERHTTP_RESPONSE_BUFSIZE_DEFAULT ;
+	e->response_buffer.base = (char*)malloc( e->response_buffer.buf_size ) ;
+	if( e->response_buffer.base == NULL )
+	{
+		DestroyHttpEnv( e );
+		return NULL;
+	}
+	memset( e->response_buffer.base , 0x00 , sizeof(e->response_buffer.buf_size) );
+	e->response_buffer.ref_flag = 0 ;
+	e->response_buffer.fill_ptr = e->response_buffer.base ;
+	e->response_buffer.process_ptr = e->response_buffer.base ;
+	
+	e->headers.header_array_size = FASTERHTTP_HEADER_ARRAYSIZE_DEFAULT ;
+	e->headers.header_array = (struct HttpHeader *)malloc( sizeof(struct HttpHeader) * e->headers.header_array_size ) ;
+	if( e->headers.header_array == NULL )
+	{
+		DestroyHttpEnv( e );
+		return NULL;
+	}
+	memset( e->headers.header_array , 0x00 , sizeof(struct HttpHeader) * e->headers.header_array_size );
+	e->headers.header_array_count = 0 ;
+	
+	e->parse_step = FASTERHTTP_PARSESTEP_BEGIN ;
+	
+	return e;
+}
+
+void ResetHttpEnv( struct HttpEnv *e )
+{
+	struct HttpHeaders	*p_headers = &(e->headers) ;
+	struct HttpBuffer	*b = NULL ;
+	
+	/* struct HttpEnv */
+	
+	ResetHttpTimeout( e );
+	
+	if( e->enable_response_compressing == 2 )
+		e->enable_response_compressing = 1 ;
+	
+	b = &(e->request_buffer) ;
+	if( b->ref_flag == 0 && UNLIKELY( b->process_ptr < b->fill_ptr ) && e->reforming_flag == 1 )
+	{
+		ReformingHttpBuffer( b );
+		e->reforming_flag = 0 ;
+	}
+	else
+	{
+		CleanHttpBuffer( b );
+	}
+	if( UNLIKELY( b->ref_flag == 0 && b->buf_size > FASTERHTTP_REQUEST_BUFSIZE_MAX && b->fill_ptr-b->process_ptr<FASTERHTTP_REQUEST_BUFSIZE_MAX ) )
+		ReallocHttpBuffer( b , FASTERHTTP_REQUEST_BUFSIZE_DEFAULT );
+	
+	b = &(e->response_buffer) ;
+	if( b->ref_flag == 0 && UNLIKELY( b->process_ptr < b->fill_ptr ) && e->reforming_flag == 1 )
+	{
+		ReformingHttpBuffer( b );
+		e->reforming_flag = 0 ;
+	}
+	else
+	{
+		CleanHttpBuffer( b );
+	}
+	if( UNLIKELY( b->ref_flag == 0 && b->buf_size > FASTERHTTP_RESPONSE_BUFSIZE_MAX ) )
+		ReallocHttpBuffer( b , FASTERHTTP_RESPONSE_BUFSIZE_DEFAULT );
+	
+	e->parse_step = FASTERHTTP_PARSESTEP_BEGIN ;
+	
+	e->body = NULL ;
+	
+	e->chunked_body = NULL ;
+	e->chunked_body_end = NULL ;
+	e->chunked_length = 0 ;
+	e->chunked_length_length = 0 ;
+	
+	/* struct HttpHeaders */
+	
+	p_headers->METHOD.value_ptr = NULL ;
+	p_headers->METHOD.value_len = 0 ;
+	p_headers->URI.value_ptr = NULL ;
+	p_headers->URI.value_len = 0 ;
+	p_headers->VERSION.value_ptr = NULL ;
+	p_headers->VERSION.value_len = 0 ;
+	//p_headers->version = 0 ; 和connection__keepalive遗留到下一个HTTP请求
+	p_headers->STATUSCODE.value_ptr = NULL ;
+	p_headers->STATUSCODE.value_len = 0 ;
+	p_headers->REASONPHRASE.value_ptr = NULL ;
+	p_headers->REASONPHRASE.value_len = 0 ;
+	p_headers->content_length = 0 ;
+	p_headers->TRAILER.value_ptr = NULL ;
+	p_headers->TRAILER.value_len = 0 ;
+	p_headers->transfer_encoding__chunked = 0 ;
+	//p_headers->connection__keepalive = 0 ;
+	
+	if( UNLIKELY( p_headers->header_array_size > FASTERHTTP_HEADER_ARRAYSIZE_MAX ) )
+	{
+		struct HttpHeader	*p = NULL ;
+		p = (struct HttpHeader *)realloc( p_headers->header_array , sizeof(struct HttpHeader) * FASTERHTTP_HEADER_ARRAYSIZE_DEFAULT ) ;
+		if( p )
+		{
+			memset( p , 0x00 , sizeof(struct HttpHeader) * p_headers->header_array_size );
+			p_headers->header_array = p ;
+			p_headers->header_array_size = FASTERHTTP_HEADER_ARRAYSIZE_DEFAULT ;
+		}
+	}
+	
+	memset( p_headers->header_array , 0x00 , sizeof(struct HttpHeader) * p_headers->header_array_size );
+	p_headers->header_array_count = 0 ;
+	
+	return;
+}
+
+void DestroyHttpEnv( struct HttpEnv *e )
+{
+	if( e )
+	{
+		if( e->request_buffer.ref_flag == 0 && e->request_buffer.base )
+			free( e->request_buffer.base );
+		if( e->response_buffer.ref_flag == 0 && e->response_buffer.base )
+			free( e->response_buffer.base );
+		
+		if( e->headers.header_array )
+			free( e->headers.header_array );
+		
+		free( e );
+	}
 	
 	return;
 }
@@ -1467,7 +1726,7 @@ static int CompressHttpBody( struct HttpEnv *e , char *header )
 	char	*p_compress_algorithm = NULL ;
 	int	compress_algorithm_len ;
 	
-	base = GetHttpHeaderPtr( e , header , NULL ) ;
+	base = QueryHttpHeaderPtr( e , header , NULL ) ;
 	while( base )
 	{
 		base = TokenHttpHeaderValue( base , & p_compress_algorithm , & compress_algorithm_len ) ;
@@ -1610,7 +1869,7 @@ static int UncompressHttpBody( struct HttpEnv *e , char *header )
 	char	*p_compress_algorithm = NULL ;
 	int	compress_algorithm_len ;
 	
-	base = GetHttpHeaderPtr( e , header , NULL ) ;
+	base = QueryHttpHeaderPtr( e , header , NULL ) ;
 	while( base )
 	{
 		base = TokenHttpHeaderValue( base , & p_compress_algorithm , & compress_algorithm_len ) ;
@@ -2093,18 +2352,6 @@ int GetHttpHeaderLen_REASONPHRASE( struct HttpEnv *e )
 	return e->headers.REASONPHRASE.value_len;
 }
 
-char *GetHttpHeaderPtr_TRAILER( struct HttpEnv *e , int *p_value_len )
-{
-	if( p_value_len )
-		(*p_value_len) = e->headers.TRAILER.value_len ;
-	return e->headers.TRAILER.value_ptr;
-}
-
-int GetHttpHeaderLen_TRAILER( struct HttpEnv *e )
-{
-	return e->headers.TRAILER.value_len;
-}
-
 struct HttpHeader *QueryHttpHeader( struct HttpEnv *e , char *name )
 {
 	int			i ;
@@ -2123,7 +2370,7 @@ struct HttpHeader *QueryHttpHeader( struct HttpEnv *e , char *name )
 	return NULL;
 }
 
-char *GetHttpHeaderPtr( struct HttpEnv *e , char *name , int *p_value_len )
+char *QueryHttpHeaderPtr( struct HttpEnv *e , char *name , int *p_value_len )
 {
 	struct HttpHeader	*p_header = NULL ;
 	
@@ -2136,7 +2383,7 @@ char *GetHttpHeaderPtr( struct HttpEnv *e , char *name , int *p_value_len )
 	return p_header->value_ptr;
 }
 
-int GetHttpHeaderLen( struct HttpEnv *e , char *name )
+int QueryHttpHeaderLen( struct HttpEnv *e , char *name )
 {
 	struct HttpHeader	*p_header = NULL ;
 	
@@ -2147,7 +2394,7 @@ int GetHttpHeaderLen( struct HttpEnv *e , char *name )
 	return p_header->value_len;
 }
 
-int GetHttpHeaderCount( struct HttpEnv *e )
+int CountHttpHeaders( struct HttpEnv *e )
 {
 	return e->headers.header_array_count;
 }
@@ -2220,278 +2467,4 @@ int GetHttpBodyLen( struct HttpEnv *e )
 	return e->headers.content_length;
 }
 
-void ResetAllHttpStatus()
-{
-	if( g_init_httpstatus == 0 )
-	{
-		SetHttpStatus( HTTP_CONTINUE , HTTP_CONTINUE_S , HTTP_CONTINUE_T );
-		SetHttpStatus( HTTP_SWITCHING_PROTOCOL , HTTP_SWITCHING_PROTOCOL_S , HTTP_SWITCHING_PROTOCOL_T );
-		SetHttpStatus( HTTP_OK , HTTP_OK_S , HTTP_OK_T );
-		SetHttpStatus( HTTP_CREATED , HTTP_CREATED_S , HTTP_CREATED_T );
-		SetHttpStatus( HTTP_ACCEPTED , HTTP_ACCEPTED_S , HTTP_ACCEPTED_T );
-		SetHttpStatus( HTTP_NON_AUTHORITATIVE_INFORMATION , HTTP_NON_AUTHORITATIVE_INFORMATION_S , HTTP_NON_AUTHORITATIVE_INFORMATION_T );
-		SetHttpStatus( HTTP_NO_CONTENT , HTTP_NO_CONTENT_S , HTTP_NO_CONTENT_T );
-		SetHttpStatus( HTTP_RESET_CONTENT , HTTP_RESET_CONTENT_S , HTTP_RESET_CONTENT_T );
-		SetHttpStatus( HTTP_PARTIAL_CONTENT , HTTP_PARTIAL_CONTENT_S , HTTP_PARTIAL_CONTENT_T );
-		SetHttpStatus( HTTP_MULTIPLE_CHOICES , HTTP_MULTIPLE_CHOICES_S , HTTP_MULTIPLE_CHOICES_T );
-		SetHttpStatus( HTTP_MOVED_PERMANNETLY , HTTP_MOVED_PERMANNETLY_S , HTTP_MOVED_PERMANNETLY_T );
-		SetHttpStatus( HTTP_FOUND , HTTP_FOUND_S , HTTP_FOUND_T );
-		SetHttpStatus( HTTP_SEE_OTHER , HTTP_SEE_OTHER_S , HTTP_SEE_OTHER_T );
-		SetHttpStatus( HTTP_NOT_MODIFIED , HTTP_NOT_MODIFIED_S , HTTP_NOT_MODIFIED_T );
-		SetHttpStatus( HTTP_USE_PROXY , HTTP_USE_PROXY_S , HTTP_USE_PROXY_T );
-		SetHttpStatus( HTTP_TEMPORARY_REDIRECT , HTTP_TEMPORARY_REDIRECT_S , HTTP_TEMPORARY_REDIRECT_T );
-		SetHttpStatus( HTTP_BAD_REQUEST , HTTP_BAD_REQUEST_S , HTTP_BAD_REQUEST_T );
-		SetHttpStatus( HTTP_UNAUTHORIZED , HTTP_UNAUTHORIZED_S , HTTP_UNAUTHORIZED_T );
-		SetHttpStatus( HTTP_PAYMENT_REQUIRED , HTTP_PAYMENT_REQUIRED_S , HTTP_PAYMENT_REQUIRED_T );
-		SetHttpStatus( HTTP_FORBIDDEN , HTTP_FORBIDDEN_S , HTTP_FORBIDDEN_T );
-		SetHttpStatus( HTTP_NOT_FOUND , HTTP_NOT_FOUND_S , HTTP_NOT_FOUND_T );
-		SetHttpStatus( HTTP_METHOD_NOT_ALLOWED , HTTP_METHOD_NOT_ALLOWED_S , HTTP_METHOD_NOT_ALLOWED_T );
-		SetHttpStatus( HTTP_NOT_ACCEPTABLE , HTTP_NOT_ACCEPTABLE_S , HTTP_NOT_ACCEPTABLE_T );
-		SetHttpStatus( HTTP_PROXY_AUTHENTICATION_REQUIRED , HTTP_PROXY_AUTHENTICATION_REQUIRED_S , HTTP_PROXY_AUTHENTICATION_REQUIRED_T );
-		SetHttpStatus( HTTP_REQUEST_TIMEOUT , HTTP_REQUEST_TIMEOUT_S , HTTP_REQUEST_TIMEOUT_T );
-		SetHttpStatus( HTTP_CONFLICT , HTTP_CONFLICT_S , HTTP_CONFLICT_T );
-		SetHttpStatus( HTTP_GONE , HTTP_GONE_S , HTTP_GONE_T );
-		SetHttpStatus( HTTP_LENGTH_REQUIRED , HTTP_LENGTH_REQUIRED_S , HTTP_LENGTH_REQUIRED_T );
-		SetHttpStatus( HTTP_PRECONDITION_FAILED , HTTP_PRECONDITION_FAILED_S , HTTP_PRECONDITION_FAILED_T );
-		SetHttpStatus( HTTP_REQUEST_ENTITY_TOO_LARGE , HTTP_REQUEST_ENTITY_TOO_LARGE_S , HTTP_REQUEST_ENTITY_TOO_LARGE_T );
-		SetHttpStatus( HTTP_URI_TOO_LONG , HTTP_URI_TOO_LONG_S , HTTP_URI_TOO_LONG_T );
-		SetHttpStatus( HTTP_UNSUPPORTED_MEDIA_TYPE , HTTP_UNSUPPORTED_MEDIA_TYPE_S , HTTP_UNSUPPORTED_MEDIA_TYPE_T );
-		SetHttpStatus( HTTP_REQUESTED_RANGE_NOT_SATISFIABLE , HTTP_REQUESTED_RANGE_NOT_SATISFIABLE_S , HTTP_REQUESTED_RANGE_NOT_SATISFIABLE_T );
-		SetHttpStatus( HTTP_EXPECTATION_FAILED , HTTP_EXPECTATION_FAILED_S , HTTP_EXPECTATION_FAILED_T );
-		SetHttpStatus( HTTP_INTERNAL_SERVER_ERROR , HTTP_INTERNAL_SERVER_ERROR_S , HTTP_INTERNAL_SERVER_ERROR_T );
-		SetHttpStatus( HTTP_NOT_IMPLEMENTED , HTTP_NOT_IMPLEMENTED_S , HTTP_NOT_IMPLEMENTED_T );
-		SetHttpStatus( HTTP_BAD_GATEWAY , HTTP_BAD_GATEWAY_S , HTTP_BAD_GATEWAY_T );
-		SetHttpStatus( HTTP_SERVICE_UNAVAILABLE , HTTP_SERVICE_UNAVAILABLE_S , HTTP_SERVICE_UNAVAILABLE_T );
-		SetHttpStatus( HTTP_GATEWAY_TIMEOUT , HTTP_GATEWAY_TIMEOUT_S , HTTP_GATEWAY_TIMEOUT_T );
-		SetHttpStatus( HTTP_VERSION_NOT_SUPPORTED , HTTP_VERSION_NOT_SUPPORTED_S , HTTP_VERSION_NOT_SUPPORTED_T );
-		
-		g_init_httpstatus = 1 ;
-	}
-	
-	return;
-}
-
-void SetHttpStatus( int status_code , char *status_code_s , char *status_text )
-{
-	g_httpstatus_array[status_code].STATUS = status_code ;
-	g_httpstatus_array[status_code].STATUS_S = status_code_s ;
-	g_httpstatus_array[status_code].STATUS_T = status_text ;
-	return;
-}
-
-void GetHttpStatus( int status_code , char **pp_status_code_s , char **pp_status_text )
-{
-	if( pp_status_code_s )
-		(*pp_status_code_s) = g_httpstatus_array[status_code].STATUS_S ;
-	if( pp_status_text )
-		(*pp_status_text) = g_httpstatus_array[status_code].STATUS_T ;
-	return;
-}
-
-void ResetHttpTimeout( struct HttpEnv *e )
-{
-	e->timeout.tv_sec = e->init_timeout ;
-	e->timeout.tv_usec = 0 ;
-	
-	return;
-}
-
-void SetHttpTimeout( struct HttpEnv *e , long timeout )
-{
-	e->init_timeout = timeout ;
-	
-	ResetHttpTimeout( e );
-	
-	return;
-}
-
-struct timeval *GetHttpElapse( struct HttpEnv *e )
-{
-	return &(e->timeout);
-}
-
-void EnableHttpResponseCompressing( struct HttpEnv *e , char enable_response_compressing )
-{
-	e->enable_response_compressing = enable_response_compressing ;
-	return;
-}
-
-void SetParserCustomIntData( struct HttpEnv *e , int i )
-{
-	e->i = i ;
-	return;
-}
-
-void SetParserCustomPtrData( struct HttpEnv *e , void *ptr )
-{
-	e->ptr = ptr ;
-	return;
-}
-
-int GetParserCustomIntData( struct HttpEnv *e )
-{
-	return e->i;
-}
-
-void *GetParserCustomPtrData( struct HttpEnv *e )
-{
-	return e->ptr;
-}
-
-struct HttpEnv *CreateHttpEnv()
-{
-	struct HttpEnv	*e = NULL ;
-	
-	ResetAllHttpStatus();
-	
-	e = (struct HttpEnv *)malloc( sizeof(struct HttpEnv) ) ;
-	if( e == NULL )
-	{
-		DestroyHttpEnv( e );
-		return NULL;
-	}
-	memset( e , 0x00 , sizeof(struct HttpEnv) );
-	
-	SetHttpTimeout( e , FASTERHTTP_TIMEOUT_DEFAULT );
-	
-	e->request_buffer.buf_size = FASTERHTTP_REQUEST_BUFSIZE_DEFAULT ;
-	e->request_buffer.base = (char*)malloc( e->request_buffer.buf_size ) ;
-	if( e->request_buffer.base == NULL )
-	{
-		DestroyHttpEnv( e );
-		return NULL;
-	}
-	memset( e->request_buffer.base , 0x00 , sizeof(e->request_buffer.buf_size) );
-	e->request_buffer.ref_flag = 0 ;
-	e->request_buffer.fill_ptr = e->request_buffer.base ;
-	e->request_buffer.process_ptr = e->request_buffer.base ;
-	
-	e->response_buffer.buf_size = FASTERHTTP_RESPONSE_BUFSIZE_DEFAULT ;
-	e->response_buffer.base = (char*)malloc( e->response_buffer.buf_size ) ;
-	if( e->response_buffer.base == NULL )
-	{
-		DestroyHttpEnv( e );
-		return NULL;
-	}
-	memset( e->response_buffer.base , 0x00 , sizeof(e->response_buffer.buf_size) );
-	e->response_buffer.ref_flag = 0 ;
-	e->response_buffer.fill_ptr = e->response_buffer.base ;
-	e->response_buffer.process_ptr = e->response_buffer.base ;
-	
-	e->headers.header_array_size = FASTERHTTP_HEADER_ARRAYSIZE_DEFAULT ;
-	e->headers.header_array = (struct HttpHeader *)malloc( sizeof(struct HttpHeader) * e->headers.header_array_size ) ;
-	if( e->headers.header_array == NULL )
-	{
-		DestroyHttpEnv( e );
-		return NULL;
-	}
-	memset( e->headers.header_array , 0x00 , sizeof(struct HttpHeader) * e->headers.header_array_size );
-	e->headers.header_array_count = 0 ;
-	
-	e->parse_step = FASTERHTTP_PARSESTEP_BEGIN ;
-	
-	return e;
-}
-
-void ResetHttpEnv( struct HttpEnv *e )
-{
-	struct HttpHeaders	*p_headers = &(e->headers) ;
-	struct HttpBuffer	*b = NULL ;
-	
-	/* struct HttpEnv */
-	
-	ResetHttpTimeout( e );
-	
-	if( e->enable_response_compressing == 2 )
-		e->enable_response_compressing = 1 ;
-	
-	b = &(e->request_buffer) ;
-	if( b->ref_flag == 0 && UNLIKELY( b->process_ptr < b->fill_ptr ) && e->reforming_flag == 1 )
-	{
-		ReformingHttpBuffer( b );
-		e->reforming_flag = 0 ;
-	}
-	else
-	{
-		CleanHttpBuffer( b );
-	}
-	if( UNLIKELY( b->ref_flag == 0 && b->buf_size > FASTERHTTP_REQUEST_BUFSIZE_MAX && b->fill_ptr-b->process_ptr<FASTERHTTP_REQUEST_BUFSIZE_MAX ) )
-		ReallocHttpBuffer( b , FASTERHTTP_REQUEST_BUFSIZE_DEFAULT );
-	
-	b = &(e->response_buffer) ;
-	if( b->ref_flag == 0 && UNLIKELY( b->process_ptr < b->fill_ptr ) && e->reforming_flag == 1 )
-	{
-		ReformingHttpBuffer( b );
-		e->reforming_flag = 0 ;
-	}
-	else
-	{
-		CleanHttpBuffer( b );
-	}
-	if( UNLIKELY( b->ref_flag == 0 && b->buf_size > FASTERHTTP_RESPONSE_BUFSIZE_MAX ) )
-		ReallocHttpBuffer( b , FASTERHTTP_RESPONSE_BUFSIZE_DEFAULT );
-	
-	e->parse_step = FASTERHTTP_PARSESTEP_BEGIN ;
-	
-	e->body = NULL ;
-	
-	e->chunked_body = NULL ;
-	e->chunked_body_end = NULL ;
-	e->chunked_length = 0 ;
-	e->chunked_length_length = 0 ;
-	
-	/* struct HttpHeaders */
-	
-	p_headers->METHOD.value_ptr = NULL ;
-	p_headers->METHOD.value_len = 0 ;
-	p_headers->URI.value_ptr = NULL ;
-	p_headers->URI.value_len = 0 ;
-	p_headers->VERSION.value_ptr = NULL ;
-	p_headers->VERSION.value_len = 0 ;
-	//p_headers->version = 0 ; 和connection__keepalive遗留到下一个HTTP请求
-	p_headers->STATUSCODE.value_ptr = NULL ;
-	p_headers->STATUSCODE.value_len = 0 ;
-	p_headers->REASONPHRASE.value_ptr = NULL ;
-	p_headers->REASONPHRASE.value_len = 0 ;
-	p_headers->content_length = 0 ;
-	p_headers->TRAILER.value_ptr = NULL ;
-	p_headers->TRAILER.value_len = 0 ;
-	p_headers->transfer_encoding__chunked = 0 ;
-	//p_headers->connection__keepalive = 0 ;
-	
-	if( UNLIKELY( p_headers->header_array_size > FASTERHTTP_HEADER_ARRAYSIZE_MAX ) )
-	{
-		struct HttpHeader	*p = NULL ;
-		p = (struct HttpHeader *)realloc( p_headers->header_array , sizeof(struct HttpHeader) * FASTERHTTP_HEADER_ARRAYSIZE_DEFAULT ) ;
-		if( p )
-		{
-			memset( p , 0x00 , sizeof(struct HttpHeader) * p_headers->header_array_size );
-			p_headers->header_array = p ;
-			p_headers->header_array_size = FASTERHTTP_HEADER_ARRAYSIZE_DEFAULT ;
-		}
-	}
-	
-	memset( p_headers->header_array , 0x00 , sizeof(struct HttpHeader) * p_headers->header_array_size );
-	p_headers->header_array_count = 0 ;
-	
-	return;
-}
-
-void DestroyHttpEnv( struct HttpEnv *e )
-{
-	if( e )
-	{
-		if( e->request_buffer.ref_flag == 0 && e->request_buffer.base )
-			free( e->request_buffer.base );
-		if( e->response_buffer.ref_flag == 0 && e->response_buffer.base )
-			free( e->response_buffer.base );
-		
-		if( e->headers.header_array )
-			free( e->headers.header_array );
-		
-		free( e );
-	}
-	
-	return;
-}
 

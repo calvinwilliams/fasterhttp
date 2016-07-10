@@ -62,13 +62,6 @@ int test_server_nonblock_slow()
 	
 	int			nret = 0 ;
 	
-	e = CreateHttpEnv();
-	if( e == NULL )
-	{
-		printf( "CreateHttpEnv failed , errno[%d]\n" , errno );
-		return -1;
-	}
-	
 	listen_sock = socket( AF_INET , SOCK_STREAM , IPPROTO_TCP ) ;
 	if( listen_sock == -1 )
 	{
@@ -108,7 +101,15 @@ int test_server_nonblock_slow()
 			break;
 		}
 		
-		ResetHttpEnv( e );
+		e = CreateHttpEnv();
+		if( e == NULL )
+		{
+			printf( "CreateHttpEnv failed , errno[%d]\n" , errno );
+			CLOSESOCKET( accept_sock );
+			return -1;
+		}
+		
+		EnableHttpResponseCompressing( e , 1 );
 		
 		while(1)
 		{
@@ -147,11 +148,13 @@ int test_server_nonblock_slow()
 		
 		if( nret == FASTERHTTP_ERROR_TCP_CLOSE )
 		{
+			DestroyHttpEnv( e );
 			CLOSESOCKET( accept_sock );
 			continue;
 		}
 		else if( nret == FASTERHTTP_INFO_TCP_CLOSE )
 		{
+			DestroyHttpEnv( e );
 			CLOSESOCKET( accept_sock );
 			continue;
 		}
@@ -160,6 +163,7 @@ int test_server_nonblock_slow()
 			nret = FormatHttpResponseStartLine( abs(nret)/1000 , e , 1 ) ;
 			if( nret )
 			{
+				DestroyHttpEnv( e );
 				CLOSESOCKET( accept_sock );
 				continue;
 			}
@@ -169,6 +173,7 @@ int test_server_nonblock_slow()
 			nret = FormatHttpResponseStartLine( HTTP_OK , e , 0 ) ;
 			if( nret )
 			{
+				DestroyHttpEnv( e );
 				CLOSESOCKET( accept_sock );
 				continue;
 			}
@@ -179,6 +184,7 @@ int test_server_nonblock_slow()
 				nret = FormatHttpResponseStartLine( nret , e , 1 ) ;
 				if( nret )
 				{
+					DestroyHttpEnv( e );
 					CLOSESOCKET( accept_sock );
 					continue;
 				}
@@ -194,13 +200,11 @@ int test_server_nonblock_slow()
 			if( nret == 0 )
 			{
 				printf( "select send timeout , errno[%d]\n" , errno );
-				CLOSESOCKET( accept_sock );
 				break;
 			}
 			else if( nret != 1 )
 			{
 				printf( "select send failed , errno[%d]\n" , errno );
-				CLOSESOCKET( accept_sock );
 				break;
 			}
 			
@@ -212,7 +216,6 @@ int test_server_nonblock_slow()
 			else if( nret )
 			{
 				printf( "SendHttpResponseNonblock failed[%d]\n" , nret );
-				CLOSESOCKET( accept_sock );
 				break;
 			}
 			else
@@ -221,12 +224,11 @@ int test_server_nonblock_slow()
 			}
 		}
 		
+		DestroyHttpEnv( e );
 		CLOSESOCKET( accept_sock );
 	}
 	
 	CLOSESOCKET( listen_sock );
-	
-	DestroyHttpEnv( e );
 	
 	return 0;
 }
