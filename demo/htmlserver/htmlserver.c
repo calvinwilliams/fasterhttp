@@ -92,7 +92,6 @@ static int OnAcceptingSocket( int epoll_fd , int listen_sock )
 	SOCKET			accept_sock ;
 	struct sockaddr_in	accept_addr ;
 	SOCKLEN_T		accept_addr_len ;
-	int			opts ;
 	
 	struct epoll_event	event ;
 	
@@ -112,9 +111,7 @@ static int OnAcceptingSocket( int epoll_fd , int listen_sock )
 		DebugLog( __FILE__ , __LINE__ , "accept ok" );
 	}
 	
-	opts = fcntl( accept_sock , F_GETFL ) ;
-	opts = opts | O_NONBLOCK ;
-	fcntl( accept_sock , F_SETFL , opts );
+	SetHttpNonblock( accept_sock );
 	
 	e = CreateHttpEnv() ;
 	if( e == NULL )
@@ -124,9 +121,7 @@ static int OnAcceptingSocket( int epoll_fd , int listen_sock )
 	}
 	
 	SetHttpTimeout( e , 120 );
-	/*
  	EnableHttpResponseCompressing( e , 1 );
- 	*/
 	
 	memset( & event , 0x00 , sizeof(struct epoll_event) );
 	event.events = EPOLLIN | EPOLLERR ;

@@ -405,6 +405,9 @@ _WINDLL_FUNC int MemcatHttpBuffer( struct HttpBuffer *b , char *base , int len )
 
 _WINDLL_FUNC int StrcatHttpBufferFromFile( struct HttpBuffer *b , char *pathfilename , int *p_filesize );
 
+/* util */
+_WINDLL_FUNC void SetHttpNonblock( int sock );
+
 #ifdef __cplusplus
 }
 #endif

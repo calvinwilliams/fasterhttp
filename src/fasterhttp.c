@@ -127,6 +127,20 @@ void _DumpHexBuffer( FILE *fp , char *buf , long buflen )
 	return;
 }
 
+void SetHttpNonblock( int sock )
+{
+#if ( defined __linux ) || ( defined __unix )
+	int	opts;
+	opts = fcntl( sock , F_GETFL );
+	opts = opts | O_NONBLOCK ;
+	fcntl( sock , F_SETFL , opts );
+#elif ( defined _WIN32 )
+	u_long	mode = 1 ;
+	ioctlsocket( sock , FIONBIO , & mode );
+#endif
+	return;
+}
+
 struct HttpBuffer *GetHttpRequestBuffer( struct HttpEnv *e )
 {
 	return &(e->request_buffer);
@@ -737,7 +751,6 @@ int SendHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpBuff
 	
 	FD_ZERO( & write_fds );
 	FD_SET( sock , & write_fds );
-	
 	nret = select( sock+1 , NULL , & write_fds , NULL , &(e->timeout) ) ;
 	if( nret == 0 )
 		return FASTERHTTP_ERROR_TCP_SELECT_SEND_TIMEOUT;
@@ -796,7 +809,6 @@ int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpB
 	
 	FD_ZERO( & read_fds );
 	FD_SET( sock , & read_fds );
-	
 	nret = select( sock+1 , & read_fds , NULL , NULL , &(e->timeout) ) ;
 	if( nret == 0 )
 		return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE_TIMEOUT;
@@ -835,6 +847,9 @@ int ReceiveHttpBuffer1( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct Http
 	fd_set		read_fds ;
 	long		len ;
 	int		nret = 0 ;
+	
+	if( b->process_ptr == b->base && b->process_ptr < b->fill_ptr )
+		return 0;
 	
 	while( (b->fill_ptr-b->base) >= b->buf_size-1 )
 	{

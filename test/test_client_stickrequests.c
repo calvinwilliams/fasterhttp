@@ -64,10 +64,12 @@ int test_client_stickrequests()
 	ResetHttpEnv( e );
 	
 	b = GetHttpRequestBuffer(e) ;
-	nret = StrcpyHttpBuffer( b ,	"Content-Length: 2\r\n"
+	nret = StrcpyHttpBuffer( b ,	"Connection: Keep-Alive\r\n"
+					"Content-Length: 2\r\n"
 					"\r\n"
 					"22"
 					"POST /3 HTTP/1.1\r\n"
+					"Connection: Keep-Alive\r\n"
 					"Content-Length: 3\r\n" ) ;
 	if( nret )
 	{
@@ -90,6 +92,7 @@ int test_client_stickrequests()
 	nret = StrcpyHttpBuffer( b ,	"\r\n"
 					"333"
 					"POST /4 HTTP/1.1\r\n"
+					"Connection: Keep-Alive\r\n"
 					"Transfer-Encoding: chunked\r\n"
 					"Trailer: Content-MD5\r\n"
 					"\r\n"
@@ -112,7 +115,7 @@ int test_client_stickrequests()
 		return -1;
 	}
 	
-	for( i = 0 ; i < 3 ; i++ )
+	for( i = 0 ; i < 4 ; i++ )
 	{
 		ResetHttpEnv( e );
 		
@@ -158,6 +161,8 @@ int main()
 	WSADATA		wsaData;
 #endif
 	int		nret = 0 ;
+	
+	setbuf( stdout , NULL );
 	
 #if ( defined _WIN32 )
 	nret = WSAStartup( MAKEWORD( 2, 2 ), &wsaData ) ;
