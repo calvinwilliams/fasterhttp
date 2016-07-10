@@ -363,7 +363,7 @@ _WINDLL_FUNC int RequestHttp( SOCKET sock , SSL *ssl , struct HttpEnv *e );
 
 /* http server advance api */
 typedef int funcProcessHttpRequest( struct HttpEnv *e , void *p );
-_WINDLL_FUNC int ResponseHttp( SOCKET sock , SSL *ssl , struct HttpEnv *e , funcProcessHttpRequest *pfuncProcessHttpRequest , void *p );
+_WINDLL_FUNC int ResponseAllHttp( SOCKET sock , SSL *ssl , struct HttpEnv *e , funcProcessHttpRequest *pfuncProcessHttpRequest , void *p );
 
 /* http client api */
 _WINDLL_FUNC int SendHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e );

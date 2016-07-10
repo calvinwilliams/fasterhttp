@@ -77,6 +77,56 @@ struct HttpStatus
 char			g_init_httpstatus = 0 ;
 struct HttpStatus	g_httpstatus_array[ 505 + 1 ] = { { 0 , NULL , NULL } } ;
 
+void _DumpHexBuffer( FILE *fp , char *buf , long buflen )
+{
+	int		row_offset , col_offset ;
+	
+	fprintf( fp , "             0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F    0123456789ABCDEF\n" );
+	
+	row_offset = 0 ;
+	col_offset = 0 ;
+	while(1)
+	{
+		fprintf( fp , "0x%08X   " , row_offset * 16 );
+		for( col_offset = 0 ; col_offset < 16 ; col_offset++ )
+		{
+			if( row_offset * 16 + col_offset < buflen )
+			{
+				fprintf( fp , "%02X " , *((unsigned char *)buf+row_offset*16+col_offset));
+			}
+			else
+			{
+				fprintf( fp , "   " );
+			}
+		}
+		fprintf( fp , "  " );
+		for( col_offset = 0 ; col_offset < 16 ; col_offset++ )
+		{
+			if( row_offset * 16 + col_offset < buflen )
+			{
+				if( isprint( (int)*(buf+row_offset*16+col_offset) ) )
+				{
+					fprintf( fp , "%c" , *((unsigned char *)buf+row_offset*16+col_offset) );
+				}
+				else
+				{
+					fprintf( fp , "." );
+				}
+			}
+			else
+			{
+				fprintf( fp , " " );
+			}
+		}
+		fprintf( fp , "\n" );
+		if( row_offset * 16 + col_offset >= buflen )
+			break;
+		row_offset++;
+	}
+	
+	return;
+}
+
 struct HttpBuffer *GetHttpRequestBuffer( struct HttpEnv *e )
 {
 	return &(e->request_buffer);
@@ -595,7 +645,8 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 	
 #if DEBUG_PARSER
 	setbuf( stdout , NULL );
-	printf( "DEBUG_PARSER >>>>>>>>> ParseHttpBuffer - b->process_ptr[0x%02X...][%.*s]\n" , b->process_ptr[0] , (int)(b->fill_ptr-b->process_ptr) , b->process_ptr );
+	printf( "DEBUG_PARSER >>>>>>>>> ParseHttpBuffer\n" );
+	_DumpHexBuffer( stdout , b->process_ptr , (long)(b->fill_ptr-b->process_ptr) );
 #endif
 	if( UNLIKELY( *(p_parse_step) == FASTERHTTP_PARSESTEP_BEGIN ) )
 	{
@@ -956,7 +1007,7 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 			{
 				if( UNLIKELY( p+1 >= fill_ptr ) )
 				{
-					return FASTERHTTP_ERROR_HTTP_HEADER_INVALID;
+					return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 				}
 				else if( LIKELY( *(p+1) == HTTP_NEWLINE ) )
 				{
@@ -1594,47 +1645,42 @@ int RequestHttp( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	return 0;
 }
 
-int ResponseHttp( SOCKET sock , SSL *ssl , struct HttpEnv *e , funcProcessHttpRequest *pfuncProcessHttpRequest , void *p )
+int ResponseAllHttp( SOCKET sock , SSL *ssl , struct HttpEnv *e , funcProcessHttpRequest *pfuncProcessHttpRequest , void *p )
 {
 	int		nret = 0 ;
 	
-_GOTO_KEEPALIVE :
-	
-	nret = ReceiveHttpRequest( sock , ssl , e ) ;
-	if( nret )
+	while(1)
 	{
-		if( nret == FASTERHTTP_INFO_TCP_CLOSE )
-			return 0;
+		nret = ReceiveHttpRequest( sock , ssl , e ) ;
+		if( nret )
+		{
+			if( nret == FASTERHTTP_INFO_TCP_CLOSE )
+				return 0;
+			else
+				return nret;
+		}
 		
-		goto _GOTO_ON_ERROR;
+		nret = FormatHttpResponseStartLine( HTTP_OK , e , 0 ) ;
+		if( nret )
+			return nret;
+		
+		nret = pfuncProcessHttpRequest( e , p ) ;
+		if( nret != HTTP_OK )
+		{
+			nret = FormatHttpResponseStartLine( abs(nret)/1000 , e , 1 ) ;
+			if( nret )
+				return nret;
+		}
+		
+		nret = SendHttpResponse( sock , ssl , e ) ;
+		if( nret )
+			return nret;
+		
+		if( ! CheckHttpKeepAlive(e) )
+			break;
+		
+		ResetHttpEnv(e);
 	}
-	
-	nret = pfuncProcessHttpRequest( e , p ) ;
-	if( nret )
-	{
-		nret = HTTP_SERVICE_UNAVAILABLE ;
-		goto _GOTO_ON_ERROR;
-	}
-	
-	nret = SendHttpResponse( sock , ssl , e ) ;
-	if( nret )
-		return nret;
-	
-	if( CheckHttpKeepAlive(e) )
-	{
-		ResetHttpEnv( e );
-		goto _GOTO_KEEPALIVE;
-	}
-	
-_GOTO_ON_ERROR :
-	
-	nret = FormatHttpResponseStartLine( abs(nret)/1000 , e , 1 ) ;
-	if( nret )
-		return nret;
-	
-	nret = SendHttpResponse( sock , ssl , e ) ;
-	if( nret )
-		return nret;
 	
 	return 0;
 }
@@ -1713,7 +1759,7 @@ int FormatHttpResponseStartLine( int status_code , struct HttpEnv *e , int fill_
 	
 	int			nret = 0 ;
 	
-	if( status_code < 0 )
+	if( status_code <= 0 )
 		status_code = HTTP_INTERNAL_SERVER_ERROR ;
 	
 	switch( status_code )
@@ -2172,56 +2218,6 @@ char *GetHttpBodyPtr( struct HttpEnv *e , int *p_body_len )
 int GetHttpBodyLen( struct HttpEnv *e )
 {
 	return e->headers.content_length;
-}
-
-void _DumpHexBuffer( FILE *fp , char *buf , long buflen )
-{
-	int		row_offset , col_offset ;
-	
-	fprintf( fp , "             0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F    0123456789ABCDEF\n" );
-	
-	row_offset = 0 ;
-	col_offset = 0 ;
-	while(1)
-	{
-		fprintf( fp , "0x%08X   " , row_offset * 16 );
-		for( col_offset = 0 ; col_offset < 16 ; col_offset++ )
-		{
-			if( row_offset * 16 + col_offset < buflen )
-			{
-				fprintf( fp , "%02X " , *((unsigned char *)buf+row_offset*16+col_offset));
-			}
-			else
-			{
-				fprintf( fp , "   " );
-			}
-		}
-		fprintf( fp , "  " );
-		for( col_offset = 0 ; col_offset < 16 ; col_offset++ )
-		{
-			if( row_offset * 16 + col_offset < buflen )
-			{
-				if( isprint( (int)*(buf+row_offset*16+col_offset) ) )
-				{
-					fprintf( fp , "%c" , *((unsigned char *)buf+row_offset*16+col_offset) );
-				}
-				else
-				{
-					fprintf( fp , "." );
-				}
-			}
-			else
-			{
-				fprintf( fp , " " );
-			}
-		}
-		fprintf( fp , "\n" );
-		if( row_offset * 16 + col_offset >= buflen )
-			break;
-		row_offset++;
-	}
-	
-	return;
 }
 
 void ResetAllHttpStatus()

@@ -1,7 +1,5 @@
 #include "fasterhttp.h"
 
-int ReceiveHttpResponseNonblock1( SOCKET sock , SSL *ssl , struct HttpEnv *e );
-
 static int TestParseHttpRequest( struct HttpEnv *e , char *str )
 {
 	SOCKET			connect_sock ;
@@ -142,7 +140,7 @@ static int TestParseHttpRequest( struct HttpEnv *e , char *str )
 	return 0;
 }
 
-int test_client_nonblock_slow()
+int test_client_nonblock()
 {
 	struct HttpEnv		*e = NULL ;
 	
@@ -218,21 +216,6 @@ int test_client_nonblock_slow()
 		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
 	}
 	
-	nret = TestParseHttpRequest( e , "POST / HTTP/1.1\r"
-					"Content-Length: 11\r"
-					"\r"
-					"only RETURN" ) ;
-	if( nret )
-	{
-		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
-		DestroyHttpEnv( e );
-		return -1;
-	}
-	else
-	{
-		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
-	}
-	
 	nret = TestParseHttpRequest( e , "POST / HTTP/1.1\r\n"
 					"Transfer-Encoding: chunked\r\n"
 					"\r\n"
@@ -296,7 +279,7 @@ int main()
 	}
 #endif
 	
-	nret = test_client_nonblock_slow() ;
+	nret = test_client_nonblock() ;
 
 #if ( defined _WIN32 )
 	WSACleanup();

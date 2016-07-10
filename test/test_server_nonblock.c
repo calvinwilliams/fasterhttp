@@ -33,7 +33,7 @@ int ProcessHttpRequest( struct HttpEnv *e , void *p )
 	printf( "HTTP BODY    [%.*s]\n" , GetHttpBodyLen(e) , GetHttpBodyPtr(e,NULL) );
 	
 	b = GetHttpResponseBuffer(e) ;
-	nret = StrcatHttpBuffer( b , "HTTP/1.1 200 OK\r\n"
+	nret = StrcatHttpBuffer( b ,	"Content-Type: text/html\r\n"
 					"Content-Length: 17\r\n"
 					"\r\n"
 					"hello fasterhttp!" ) ;
@@ -43,12 +43,10 @@ int ProcessHttpRequest( struct HttpEnv *e , void *p )
 		return HTTP_INTERNAL_SERVER_ERROR;
 	}
 	
-	return 0;
+	return HTTP_OK;
 }
 
-int ReceiveHttpRequestNonblock1( SOCKET sock , SSL *ssl , struct HttpEnv *e );
-
-int test_server_nonblock_slow_slow()
+int test_server_nonblock()
 {
 	SOCKET			listen_sock ;
 	struct sockaddr_in	listen_addr ;
@@ -81,7 +79,7 @@ int test_server_nonblock_slow_slow()
 	
 	memset( & listen_addr , 0x00 , sizeof(struct sockaddr_in) );
 	listen_addr.sin_family = AF_INET;
-	listen_addr.sin_addr.s_addr = inet_addr( "127.0.0.1" );
+	listen_addr.sin_addr.s_addr = INADDR_ANY ;
 	listen_addr.sin_port = htons( (unsigned short)9527 );
 	
 	nret = bind( listen_sock , (struct sockaddr *) & listen_addr , sizeof(struct sockaddr) ) ;
@@ -166,8 +164,15 @@ int test_server_nonblock_slow_slow()
 		}
 		else
 		{
-			nret = ProcessHttpRequest( e , (void*)(&accept_sock) ) ;
+			nret = FormatHttpResponseStartLine( HTTP_OK , e , 0 ) ;
 			if( nret )
+			{
+				CLOSESOCKET( accept_sock );
+				continue;
+			}
+			
+			nret = ProcessHttpRequest( e , (void*)(&accept_sock) ) ;
+			if( nret != HTTP_OK )
 			{
 				nret = FormatHttpResponseStartLine( nret , e , 1 ) ;
 				if( nret )
@@ -240,7 +245,7 @@ int main()
 	}
 #endif
 	
-	nret = test_server_nonblock_slow_slow() ;
+	nret = test_server_nonblock() ;
 
 #if ( defined _WIN32 )
 	WSACleanup();

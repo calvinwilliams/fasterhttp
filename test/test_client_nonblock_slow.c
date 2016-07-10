@@ -103,7 +103,8 @@ static int TestParseHttpRequest( struct HttpEnv *e , char *str )
 		}
 		else if( nret )
 		{
-			printf( "ReceiveHttpResponseNonblock1 failed[%d]\n" , nret );
+			struct HttpBuffer	*b = GetHttpResponseBuffer(e) ;
+			printf( "ReceiveHttpResponseNonblock1 failed[%d] , [%.*s]\n" , nret , GetHttpBufferLength(b) , GetHttpBufferBase(b) );
 			CLOSESOCKET( connect_sock );
 			return nret;
 		}
@@ -156,7 +157,6 @@ int test_client_nonblock_slow()
 	}
 	
 	nret = TestParseHttpRequest( e , "GET / HTTP/1.1\r\n\r\n" ) ;
-					//"\r\n" ) ;
 	if( nret )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
@@ -207,21 +207,6 @@ int test_client_nonblock_slow()
 					"Content-Length: 12\n"
 					"\n"
 					"only NEWLINE" ) ;
-	if( nret )
-	{
-		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
-		DestroyHttpEnv( e );
-		return -1;
-	}
-	else
-	{
-		printf( "%s:%d | test ok[%d]\n" , __FILE__ , __LINE__ , nret );
-	}
-	
-	nret = TestParseHttpRequest( e , "POST / HTTP/1.1\r"
-					"Content-Length: 11\r"
-					"\r"
-					"only RETURN" ) ;
 	if( nret )
 	{
 		printf( "%s:%d | test failed[%d]\n" , __FILE__ , __LINE__ , nret );
