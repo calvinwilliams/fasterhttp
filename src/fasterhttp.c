@@ -826,9 +826,17 @@ static int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struc
 	else
 		len = (int)SSL_read( ssl , b->fill_ptr , b->buf_size-1 - (b->fill_ptr-b->base) ) ;
 	if( len == -1 )
+	{
+		if( errno == EWOULDBLOCK )
+			return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
+		else if( errno == ECONNRESET )
+			return FASTERHTTP_ERROR_TCP_CLOSE;
 		return FASTERHTTP_ERROR_TCP_RECEIVE;
+	}
 	else if( len == 0 )
+	{
 		return FASTERHTTP_ERROR_TCP_CLOSE;
+	}
 	
 #if DEBUG_COMM
 printf( "recv\n" );
@@ -886,9 +894,17 @@ static int ReceiveHttpBuffer1( SOCKET sock , SSL *ssl , struct HttpEnv *e , stru
 	else
 		len = (long)SSL_read( ssl , b->fill_ptr , 1 ) ;
 	if( len == -1 )
+	{
+		if( errno == EWOULDBLOCK )
+			return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
+		else if( errno == ECONNRESET )
+			return FASTERHTTP_ERROR_TCP_CLOSE;
 		return FASTERHTTP_ERROR_TCP_RECEIVE;
+	}
 	else if( len == 0 )
+	{
 		return FASTERHTTP_ERROR_TCP_CLOSE;
+	}
 	
 #if ( defined _WIN32 )
 	time( &(t2.tv_sec) );
