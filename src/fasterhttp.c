@@ -733,7 +733,7 @@ static void AjustTimeval( struct timeval *ptv , struct timeval *t1 , struct time
 	return;
 }
 
-int SendHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpBuffer *b )
+static int SendHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpBuffer *b , int wait_flag )
 {
 	struct timeval	t1 , t2 ;
 	fd_set		write_fds ;
@@ -749,13 +749,16 @@ int SendHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpBuff
 	gettimeofday( & t1 , NULL );
 #endif
 	
-	FD_ZERO( & write_fds );
-	FD_SET( sock , & write_fds );
-	nret = select( sock+1 , NULL , & write_fds , NULL , &(e->timeout) ) ;
-	if( nret == 0 )
-		return FASTERHTTP_ERROR_TCP_SELECT_SEND_TIMEOUT;
-	else if( nret != 1 )
-		return FASTERHTTP_ERROR_TCP_SELECT_SEND;
+	if( wait_flag )
+	{
+		FD_ZERO( & write_fds );
+		FD_SET( sock , & write_fds );
+		nret = select( sock+1 , NULL , & write_fds , NULL , &(e->timeout) ) ;
+		if( nret == 0 )
+			return FASTERHTTP_ERROR_TCP_SELECT_SEND_TIMEOUT;
+		else if( nret != 1 )
+			return FASTERHTTP_ERROR_TCP_SELECT_SEND;
+	}
 	
 	if( ssl == NULL )
 		len = (int)send( sock , b->process_ptr , b->fill_ptr-b->process_ptr , 0 ) ;
@@ -784,7 +787,7 @@ _DumpHexBuffer( stdout , b->process_ptr , len );
 		return FASTERHTTP_INFO_TCP_SEND_WOULDBLOCK;
 }
 
-int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpBuffer *b )
+static int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpBuffer *b , int wait_flag )
 {
 	struct timeval	t1 , t2 ;
 	fd_set		read_fds ;
@@ -807,13 +810,16 @@ int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpB
 	gettimeofday( & t1 , NULL );
 #endif
 	
-	FD_ZERO( & read_fds );
-	FD_SET( sock , & read_fds );
-	nret = select( sock+1 , & read_fds , NULL , NULL , &(e->timeout) ) ;
-	if( nret == 0 )
-		return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE_TIMEOUT;
-	else if( nret != 1 )
-		return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE;
+	if( wait_flag )
+	{
+		FD_ZERO( & read_fds );
+		FD_SET( sock , & read_fds );
+		nret = select( sock+1 , & read_fds , NULL , NULL , &(e->timeout) ) ;
+		if( nret == 0 )
+			return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE_TIMEOUT;
+		else if( nret != 1 )
+			return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE;
+	}
 	
 	if( ssl == NULL )
 		len = (int)recv( sock , b->fill_ptr , b->buf_size-1 - (b->fill_ptr-b->base) , 0 ) ;
@@ -841,7 +847,7 @@ _DumpHexBuffer( stdout , b->fill_ptr , len );
 	return 0;
 }
 
-int ReceiveHttpBuffer1( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpBuffer *b )
+static int ReceiveHttpBuffer1( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct HttpBuffer *b , int wait_flag )
 {
 	struct timeval	t1 , t2 ;
 	fd_set		read_fds ;
@@ -864,14 +870,16 @@ int ReceiveHttpBuffer1( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct Http
 	gettimeofday( & t1 , NULL );
 #endif
 	
-	FD_ZERO( & read_fds );
-	FD_SET( sock , & read_fds );
-	
-	nret = select( sock+1 , & read_fds , NULL , NULL , &(e->timeout) ) ;
-	if( nret == 0 )
-		return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE_TIMEOUT;
-	else if( nret != 1 )
-		return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE;
+	if( wait_flag )
+	{
+		FD_ZERO( & read_fds );
+		FD_SET( sock , & read_fds );
+		nret = select( sock+1 , & read_fds , NULL , NULL , &(e->timeout) ) ;
+		if( nret == 0 )
+			return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE_TIMEOUT;
+		else if( nret != 1 )
+			return FASTERHTTP_ERROR_TCP_SELECT_RECEIVE;
+	}
 	
 	if( ssl == NULL )
 		len = (long)recv( sock , b->fill_ptr , 1 , 0 ) ;
@@ -1591,7 +1599,7 @@ int ParseHttpRequest( struct HttpEnv *e )
 
 #undef DEBUG_COMM
 
-static char *TokenHttpHeaderValue( char *str , char **pp_token , int *p_token_len )
+char *TokenHttpHeaderValue( char *str , char **pp_token , int *p_token_len )
 {
 	char	*p = str ;
 	
@@ -1776,7 +1784,7 @@ int SendHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	
 	while(1)
 	{
-		nret = SendHttpBuffer( sock , ssl , e , &(e->response_buffer) ) ;
+		nret = SendHttpBuffer( sock , ssl , e , &(e->response_buffer) , 1 ) ;
 		if( nret == 0 )
 			break;
 		else if( nret != FASTERHTTP_INFO_TCP_SEND_WOULDBLOCK )
@@ -1965,7 +1973,7 @@ int SendHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	
 	while(1)
 	{
-		nret = SendHttpBuffer( sock , ssl , e , &(e->request_buffer) ) ;
+		nret = SendHttpBuffer( sock , ssl , e , &(e->request_buffer) , 1 ) ;
 		if( nret == 0 )
 			break;
 		else if( nret != FASTERHTTP_INFO_TCP_SEND_WOULDBLOCK )
@@ -1981,7 +1989,7 @@ int ReceiveHttpResponse( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	
 	while(1)
 	{
-		nret = ReceiveHttpBuffer( sock , ssl , e , &(e->response_buffer) ) ;
+		nret = ReceiveHttpBuffer( sock , ssl , e , &(e->response_buffer) , 1 ) ;
 		if( nret )
 		{
 			if( nret == FASTERHTTP_ERROR_TCP_CLOSE && e->parse_step == FASTERHTTP_PARSESTEP_BEGIN )
@@ -2006,7 +2014,7 @@ int ReceiveHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	
 	while(1)
 	{
-		nret = ReceiveHttpBuffer( sock , ssl , e , &(e->request_buffer) ) ;
+		nret = ReceiveHttpBuffer( sock , ssl , e , &(e->request_buffer) , 1 ) ;
 		if( nret )
 		{
 			if( nret == FASTERHTTP_ERROR_TCP_CLOSE && e->parse_step == FASTERHTTP_PARSESTEP_BEGIN )
@@ -2030,6 +2038,9 @@ int ReceiveHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 int FormatHttpResponseStartLine( int status_code , struct HttpEnv *e , int fill_body_with_status_flag )
 {
 	struct HttpBuffer	*b = GetHttpResponseBuffer(e) ;
+	
+	char			*p_status_code_s = NULL ;
+	char			*p_status_text = NULL ;
 	
 	int			nret = 0 ;
 	
@@ -2165,12 +2176,12 @@ int FormatHttpResponseStartLine( int status_code , struct HttpEnv *e , int fill_
 	if( nret )
 		return nret;
 	
+	GetHttpStatus( status_code , &p_status_code_s , &p_status_text );
+	e->headers.STATUSCODE.value_ptr = p_status_code_s ;
+	e->headers.STATUSCODE.value_len = 3 ;
+	
 	if( fill_body_with_status_flag )
 	{
-		char	*p_status_code_s = NULL ;
-		char	*p_status_text = NULL ;
-		
-		GetHttpStatus( status_code , &p_status_code_s , &p_status_text );
 		nret = StrcatfHttpBuffer( b	, "Content-length: %d%s"
 						"%s"
 						"%s %s"
@@ -2189,7 +2200,7 @@ int SendHttpRequestNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 {
 	int		nret = 0 ;
 	
-	nret = SendHttpBuffer( sock , ssl , e , &(e->request_buffer) ) ;
+	nret = SendHttpBuffer( sock , ssl , e , &(e->request_buffer) , 0 ) ;
 	if( nret )
 		return nret;
 	else
@@ -2200,7 +2211,7 @@ int ReceiveHttpResponseNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 {
 	int		nret = 0 ;
 	
-	nret = ReceiveHttpBuffer( sock , ssl , e , &(e->response_buffer) ) ;
+	nret = ReceiveHttpBuffer( sock , ssl , e , &(e->response_buffer) , 0 ) ;
 	if( nret )
 	{
 		if( nret == FASTERHTTP_ERROR_TCP_CLOSE && e->parse_step == FASTERHTTP_PARSESTEP_BEGIN )
@@ -2220,7 +2231,7 @@ _WINDLL_FUNC int ReceiveHttpResponseNonblock1( SOCKET sock , SSL *ssl , struct H
 {
 	int		nret = 0 ;
 	
-	nret = ReceiveHttpBuffer1( sock , ssl , e , &(e->response_buffer) ) ;
+	nret = ReceiveHttpBuffer1( sock , ssl , e , &(e->response_buffer) , 0 ) ;
 	if( nret )
 	{
 		if( nret == FASTERHTTP_ERROR_TCP_CLOSE && e->parse_step == FASTERHTTP_PARSESTEP_BEGIN )
@@ -2240,7 +2251,7 @@ int ReceiveHttpRequestNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 {
 	int		nret = 0 ;
 	
-	nret = ReceiveHttpBuffer( sock , ssl , e , &(e->request_buffer) ) ;
+	nret = ReceiveHttpBuffer( sock , ssl , e , &(e->request_buffer) , 0 ) ;
 	if( nret )
 	{
 		if( nret == FASTERHTTP_ERROR_TCP_CLOSE && e->parse_step == FASTERHTTP_PARSESTEP_BEGIN )
@@ -2260,7 +2271,7 @@ _WINDLL_FUNC int ReceiveHttpRequestNonblock1( SOCKET sock , SSL *ssl , struct Ht
 {
 	int		nret = 0 ;
 	
-	nret = ReceiveHttpBuffer1( sock , ssl , e , &(e->request_buffer) ) ;
+	nret = ReceiveHttpBuffer1( sock , ssl , e , &(e->request_buffer) , 0 ) ;
 	if( nret )
 	{
 		if( nret == FASTERHTTP_ERROR_TCP_CLOSE && e->parse_step == FASTERHTTP_PARSESTEP_BEGIN )
@@ -2289,7 +2300,7 @@ int SendHttpResponseNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 		e->enable_response_compressing = 2 ;
 	}
 	
-	nret = SendHttpBuffer( sock , ssl , e , &(e->response_buffer) ) ;
+	nret = SendHttpBuffer( sock , ssl , e , &(e->response_buffer) , 0 ) ;
 	if( nret )
 		return nret;
 	else

@@ -137,7 +137,7 @@ int test_server_nonblock()
 			{
 				printf( "ReceiveHttpRequestNonblock failed[%d]\n" , nret );
 				
-				nret = FormatHttpResponseStartLine( abs(nret)/1000 , e , 1 ) ;
+				nret = FormatHttpResponseStartLine( abs(nret)/100 , e , 1 ) ;
 				if( nret )
 					break;
 			}

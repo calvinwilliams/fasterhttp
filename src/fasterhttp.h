@@ -407,6 +407,7 @@ _WINDLL_FUNC int StrcatHttpBufferFromFile( struct HttpBuffer *b , char *pathfile
 
 /* util */
 _WINDLL_FUNC void SetHttpNonblock( int sock );
+_WINDLL_FUNC char *TokenHttpHeaderValue( char *str , char **pp_token , int *p_token_len );
 
 #ifdef __cplusplus
 }
