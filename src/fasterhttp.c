@@ -665,7 +665,7 @@ void ResetHttpEnv( struct HttpEnv *e )
 	p_headers->URI.value_len = 0 ;
 	p_headers->VERSION.value_ptr = NULL ;
 	p_headers->VERSION.value_len = 0 ;
-	//p_headers->version = 0 ; 和connection__keepalive遗留到下一个HTTP请求
+	p_headers->version = 0 ;
 	p_headers->STATUSCODE.value_ptr = NULL ;
 	p_headers->STATUSCODE.value_len = 0 ;
 	p_headers->REASONPHRASE.value_ptr = NULL ;
@@ -674,7 +674,7 @@ void ResetHttpEnv( struct HttpEnv *e )
 	p_headers->TRAILER.value_ptr = NULL ;
 	p_headers->TRAILER.value_len = 0 ;
 	p_headers->transfer_encoding__chunked = 0 ;
-	//p_headers->connection__keepalive = 0 ;
+	p_headers->connection__keepalive = 0 ;
 	
 	if( UNLIKELY( p_headers->header_array_size > FASTERHTTP_HEADER_ARRAYSIZE_MAX ) )
 	{
