@@ -127,6 +127,13 @@ void _DumpHexBuffer( FILE *fp , char *buf , long buflen )
 	return;
 }
 
+void SetHttpReuseAddr( int sock )
+{
+	int	onoff = 1 ;
+	setsockopt( sock , SOL_SOCKET , SO_REUSEADDR , (void *) & onoff , sizeof(int) );
+	return;
+}
+
 void SetHttpNonblock( int sock )
 {
 #if ( defined __linux ) || ( defined __unix )
@@ -138,6 +145,22 @@ void SetHttpNonblock( int sock )
 	u_long	mode = 1 ;
 	ioctlsocket( sock , FIONBIO , & mode );
 #endif
+	return;
+}
+
+void SetHttpNodelay( int sock )
+{
+	int     onoff = 1 ;
+	setsockopt( sock , IPPROTO_TCP , TCP_NODELAY , (void*) & onoff , sizeof(int) );
+	return;
+}
+
+void SetHttpNoLinger( int sock )
+{
+	struct linger   lg;
+	lg.l_onoff = 1 ;
+	lg.l_linger = 0 ;
+	setsockopt( sock , SOL_SOCKET , SO_LINGER , (void*) & lg , sizeof(struct linger) );
 	return;
 }
 
