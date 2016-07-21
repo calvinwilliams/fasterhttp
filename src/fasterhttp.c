@@ -127,9 +127,8 @@ void _DumpHexBuffer( FILE *fp , char *buf , long buflen )
 	return;
 }
 
-void SetHttpReuseAddr( int sock )
+void SetHttpReuseAddr( int sock , int onoff )
 {
-	int	onoff = 1 ;
 	setsockopt( sock , SOL_SOCKET , SO_REUSEADDR , (void *) & onoff , sizeof(int) );
 	return;
 }
@@ -148,18 +147,25 @@ void SetHttpNonblock( int sock )
 	return;
 }
 
-void SetHttpNodelay( int sock )
+void SetHttpNodelay( int sock , int onoff )
 {
-	int     onoff = 1 ;
 	setsockopt( sock , IPPROTO_TCP , TCP_NODELAY , (void*) & onoff , sizeof(int) );
 	return;
 }
 
-void SetHttpNoLinger( int sock )
+void SetHttpNoLinger( int sock , int val )
 {
 	struct linger   lg;
-	lg.l_onoff = 1 ;
-	lg.l_linger = 0 ;
+	if( val >= 0 )
+	{
+		lg.l_onoff = 1 ;
+		lg.l_linger = val ;
+	}
+	else
+	{
+		lg.l_onoff = 0 ;
+		lg.l_linger = 0 ;
+	}
 	setsockopt( sock , SOL_SOCKET , SO_LINGER , (void*) & lg , sizeof(struct linger) );
 	return;
 }
