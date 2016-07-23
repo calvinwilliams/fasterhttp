@@ -794,7 +794,11 @@ static int SendHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct H
 	else
 		len = (int)SSL_write( ssl , b->process_ptr , b->fill_ptr-b->process_ptr ) ;
 	if( len == -1 )
+	{
+		if( errno == EAGAIN || errno == EWOULDBLOCK )
+			return FASTERHTTP_INFO_TCP_SEND_WOULDBLOCK;
 		return FASTERHTTP_ERROR_TCP_SEND;
+	}
 	
 #if DEBUG_COMM
 printf( "send\n" );
@@ -856,7 +860,7 @@ static int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struc
 		len = (int)SSL_read( ssl , b->fill_ptr , b->buf_size-1 - (b->fill_ptr-b->base) ) ;
 	if( len == -1 )
 	{
-		if( errno == EWOULDBLOCK )
+		if( errno == EAGAIN || errno == EWOULDBLOCK )
 			return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 		else if( errno == ECONNRESET )
 			return FASTERHTTP_ERROR_TCP_CLOSE;
