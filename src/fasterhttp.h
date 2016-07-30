@@ -47,12 +47,14 @@ char *strcasestr(const char *haystack, const char *needle);
 #endif
 #endif
 
+#ifndef LIKELY
 #if __GNUC__ >= 3
 #define LIKELY(x) __builtin_expect(!!(x), 1)
 #define UNLIKELY(x) __builtin_expect(!!(x), 0)
 #else
 #define LIKELY(x) (x)
 #define UNLIKELY(x) (x)
+#endif
 #endif
 
 #ifndef STRCMP
@@ -406,11 +408,69 @@ _WINDLL_FUNC int MemcatHttpBuffer( struct HttpBuffer *b , char *base , int len )
 _WINDLL_FUNC int StrcatHttpBufferFromFile( struct HttpBuffer *b , char *pathfilename , int *p_filesize );
 
 /* util */
-_WINDLL_FUNC void SetHttpReuseAddr( int sock , int onoff );
-_WINDLL_FUNC void SetHttpNonblock( int sock );
-_WINDLL_FUNC void SetHttpNodelay( int sock , int onoff );
-_WINDLL_FUNC void SetHttpNoLinger( int sock , int val );
-_WINDLL_FUNC void SetHttpCloseExec( int sock );
+#define SetHttpReuseAddr(_sock_) \
+	{ \
+		int	onoff = 1 ; \
+		setsockopt( _sock_ , SOL_SOCKET , SO_REUSEADDR , (void *) & onoff , sizeof(int) ); \
+	}
+
+#if ( defined __linux ) || ( defined __unix )
+#define SetHttpNonblock(_sock_) \
+	{ \
+		int	opts; \
+		opts = fcntl( _sock_ , F_GETFL ); \
+		opts |= O_NONBLOCK ; \
+		fcntl( _sock_ , F_SETFL , opts ); \
+	}
+#define SetHttpBlock(_sock_) \
+	{ \
+		int	opts; \
+		opts = fcntl( _sock_ , F_GETFL ); \
+		opts &= ~O_NONBLOCK ; \
+		fcntl( _sock_ , F_SETFL , opts ); \
+	}
+#elif ( defined _WIN32 )
+#define SetHttpNonblock(_sock_) \
+	{ \
+		u_long	mode = 1 ; \
+		ioctlsocket( _sock_ , FIONBIO , & mode ); \
+	}
+#define SetHttpBlock(_sock_) \
+	{ \
+		u_long	mode = 0 ; \
+		ioctlsocket( _sock_ , FIONBIO , & mode ); \
+	}
+#endif
+
+#define SetHttpNodelay(_sock_,_onoff_) \
+	{ \
+		int	onoff = _onoff_ ; \
+		setsockopt( _sock_ , IPPROTO_TCP , TCP_NODELAY , (void*) & onoff , sizeof(int) ); \
+	}
+
+#define SetHttpNoLinger(_sock_,_linger_) \
+	{ \
+		struct linger   lg; \
+		if( _linger_ >= 0 ) \
+		{ \
+			lg.l_onoff = 1 ; \
+			lg.l_linger = _linger_ ; \
+		} \
+		else \
+		{ \
+			lg.l_onoff = 0 ; \
+			lg.l_linger = 0 ; \
+		} \
+		setsockopt( _sock_ , SOL_SOCKET , SO_LINGER , (void*) & lg , sizeof(struct linger) ); \
+	}
+
+#define SetHttpCloseExec(_sock_) \
+	{ \
+		int	val ; \
+		val = fcntl( _sock_ , F_GETFD ) ; \
+		val |= FD_CLOEXEC ; \
+		fcntl( _sock_ , F_SETFD , val ); \
+	}
 
 _WINDLL_FUNC char *TokenHttpHeaderValue( char *str , char **pp_token , int *p_token_len );
 
