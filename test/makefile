@@ -40,9 +40,11 @@ BIN		=	test_demo \
 
 ###### 编译选项
 CFLAGS		=	$(_CFLAGS) \
+			-I$(HOME)/include/fasterhttp \
 
 ###### 链接选项
 LFLAGS		=	$(_LFLAGS) \
+			-L$(HOME)/lib \
 			-lfasterhttp \
 
 ###### 额外宏定义区
