@@ -2246,9 +2246,9 @@ int FormatHttpResponseStartLine( int status_code , struct HttpEnv *e , int fill_
 		nret = StrcatfHttpBuffer( b	, "Content-length: %d%s"
 						"%s"
 						"%s %s"
-						, strlen(p_status_code_s)+1+strlen(p_status_text) , HTTP_RETURN_NEWLINE
+						, strlen(p_status_text) , HTTP_RETURN_NEWLINE
 						, HTTP_RETURN_NEWLINE
-						, p_status_code_s , p_status_text
+						, p_status_text
 						) ;
 		if( nret )
 			return nret;
