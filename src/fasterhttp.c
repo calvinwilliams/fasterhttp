@@ -22,6 +22,7 @@ struct HttpHeader
 struct HttpHeaders
 {
 	struct HttpHeader	METHOD ;
+	char			method ;
 	struct HttpHeader	URI ;
 	struct HttpHeader	VERSION ;
 	char			version ;	/* 1.0 -> 10 */
@@ -55,7 +56,6 @@ struct HttpEnv
 	
 	int			parse_step ;
 	struct HttpHeaders	headers ;
-	char			HEAD_method_flag ;
 	
 	char			*body ;
 	
@@ -593,7 +593,6 @@ struct HttpEnv *CreateHttpEnv()
 	e->headers.header_array_count = 0 ;
 	
 	e->parse_step = FASTERHTTP_PARSESTEP_BEGIN ;
-	e->HEAD_method_flag = 0 ;
 	
 	return e;
 }
@@ -640,7 +639,6 @@ void ResetHttpEnv( struct HttpEnv *e )
 		ReallocHttpBuffer( b , FASTERHTTP_RESPONSE_BUFSIZE_DEFAULT );
 	
 	e->parse_step = FASTERHTTP_PARSESTEP_BEGIN ;
-	e->HEAD_method_flag = 0 ;
 	
 	e->body = NULL ;
 	
@@ -653,6 +651,7 @@ void ResetHttpEnv( struct HttpEnv *e )
 	
 	p_headers->METHOD.value_ptr = NULL ;
 	p_headers->METHOD.value_len = 0 ;
+	p_headers->method = 0 ;
 	p_headers->URI.value_ptr = NULL ;
 	p_headers->URI.value_len = 0 ;
 	p_headers->VERSION.value_ptr = NULL ;
@@ -932,6 +931,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 	struct HttpHeader	*p_header = &(e->headers.header_array[e->headers.header_array_count]) ;
 	char			*fill_ptr = b->fill_ptr ;
 	
+	char			*p_method = &(e->headers.method) ;
 	char			*p_version = &(e->headers.version) ;
 	int			*p_content_length = &(e->headers.content_length) ;
 	char			*p_transfer_encoding__chunked = &(e->headers.transfer_encoding__chunked) ;
@@ -1000,9 +1000,9 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			if( LIKELY( p_METHOD->value_len == 3 ) )
 			{
 				if( LIKELY( *(p2) == HTTP_METHOD_GET[0] && *(p2+1) == HTTP_METHOD_GET[1] && *(p2+2) == HTTP_METHOD_GET[2] ) )
-					;
+					(*p_method) = HTTP_METHOD_GET_N ;
 				else if( *(p2) == HTTP_METHOD_PUT[0] && *(p2+1) == HTTP_METHOD_PUT[1] && *(p2+2) == HTTP_METHOD_PUT[2] )
-					;
+					(*p_method) = HTTP_METHOD_PUT_N ;
 				else
 					return FASTERHTTP_ERROR_METHOD_INVALID;
 			}
@@ -1010,10 +1010,10 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			{
 				if( LIKELY( *(p2) == HTTP_METHOD_POST[0] && *(p2+1) == HTTP_METHOD_POST[1] && *(p2+2) == HTTP_METHOD_POST[2]
 					&& *(p2+3) == HTTP_METHOD_POST[3] ) )
-					;
+					(*p_method) = HTTP_METHOD_POST_N ;
 				else if( *(p2) == HTTP_METHOD_HEAD[0] && *(p2+1) == HTTP_METHOD_HEAD[1] && *(p2+2) == HTTP_METHOD_HEAD[2]
 					&& *(p2+3) == HTTP_METHOD_HEAD[3] )
-					;
+					(*p_method) = HTTP_METHOD_HEAD_N ;
 				else
 					return FASTERHTTP_ERROR_METHOD_INVALID;
 			}
@@ -1021,7 +1021,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			{
 				if( *(p2) == HTTP_METHOD_TRACE[0] && *(p2+1) == HTTP_METHOD_TRACE[1] && *(p2+2) == HTTP_METHOD_TRACE[2]
 					&& *(p2+3) == HTTP_METHOD_TRACE[3] && *(p2+4) == HTTP_METHOD_TRACE[4] )
-					;
+					(*p_method) = HTTP_METHOD_TRACE_N ;
 				else
 					return FASTERHTTP_ERROR_METHOD_INVALID;
 			}
@@ -1029,7 +1029,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			{
 				if( *(p2) == HTTP_METHOD_DELETE[0] && *(p2+1) == HTTP_METHOD_DELETE[1] && *(p2+2) == HTTP_METHOD_DELETE[2]
 					&& *(p2+3) == HTTP_METHOD_DELETE[3] && *(p2+4) == HTTP_METHOD_DELETE[4] && *(p2+5) == HTTP_METHOD_DELETE[5] )
-					;
+					(*p_method) = HTTP_METHOD_DELETE_N ;
 				else
 					return FASTERHTTP_ERROR_METHOD_INVALID;
 			}
@@ -1038,7 +1038,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				if( *(p2) == HTTP_METHOD_OPTIONS[0] && *(p2+1) == HTTP_METHOD_OPTIONS[1] && *(p2+2) == HTTP_METHOD_OPTIONS[2]
 					&& *(p2+3) == HTTP_METHOD_OPTIONS[3] && *(p2+4) == HTTP_METHOD_OPTIONS[4] && *(p2+5) == HTTP_METHOD_OPTIONS[5]
 					&& *(p2+6) == HTTP_METHOD_OPTIONS[6] )
-					;
+					(*p_method) = HTTP_METHOD_OPTIONS_N ;
 				else
 					return FASTERHTTP_ERROR_METHOD_INVALID;
 			}
@@ -1313,7 +1313,7 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 				}
 				
 #define _IF_THEN_GO_PARSING_BODY \
-				if( e->HEAD_method_flag == 1 ) \
+				if( e->headers.method == HTTP_METHOD_HEAD_N ) \
 				{ \
 					b->process_ptr = p ; \
 					*(p_parse_step) = FASTERHTTP_PARSESTEP_DONE ; \
@@ -1992,7 +1992,7 @@ int SendHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	p = e->request_buffer.base ;
 	if( p && p[0] == HTTP_METHOD_HEAD[0] && p[1] == HTTP_METHOD_HEAD[1] && p[2] == HTTP_METHOD_HEAD[2] && p[3] == HTTP_METHOD_HEAD[3] )
 	{
-		e->HEAD_method_flag = 1 ;
+		e->headers.method = HTTP_METHOD_HEAD_N ;
 	}
 	
 	while(1)
@@ -2228,7 +2228,7 @@ int SendHttpRequestNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 	p = e->request_buffer.base ;
 	if( p && p[0] == HTTP_METHOD_HEAD[0] && p[1] == HTTP_METHOD_HEAD[1] && p[2] == HTTP_METHOD_HEAD[2] && p[3] == HTTP_METHOD_HEAD[3] )
 	{
-		e->HEAD_method_flag = 1 ;
+		e->headers.method = HTTP_METHOD_HEAD_N ;
 	}
 	
 	nret = SendHttpBuffer( sock , ssl , e , &(e->request_buffer) , 0 ) ;
@@ -2407,6 +2407,16 @@ char *GetHttpHeaderPtr_REASONPHRASE( struct HttpEnv *e , int *p_value_len )
 int GetHttpHeaderLen_REASONPHRASE( struct HttpEnv *e )
 {
 	return e->headers.REASONPHRASE.value_len;
+}
+
+char GetHttpHeader_METHOD( struct HttpEnv *e )
+{
+	return e->headers.method;
+}
+
+char GetHttpHeader_VERSION( struct HttpEnv *e )
+{
+	return e->headers.version;
 }
 
 struct HttpHeader *QueryHttpHeader( struct HttpEnv *e , char *name )

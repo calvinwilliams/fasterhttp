@@ -297,6 +297,14 @@ char *strcasestr(const char *haystack, const char *needle);
 #define HTTP_METHOD_PUT					"PUT"
 #define HTTP_METHOD_DELETE				"DELETE"
 
+#define HTTP_METHOD_GET_N				1
+#define HTTP_METHOD_POST_N				2
+#define HTTP_METHOD_HEAD_N				3
+#define HTTP_METHOD_TRACE_N				4
+#define HTTP_METHOD_OPTIONS_N				5
+#define HTTP_METHOD_PUT_N				6
+#define HTTP_METHOD_DELETE_N				7
+
 #define HTTP_VERSION_1_0				"HTTP/1.0"
 #define HTTP_VERSION_1_1				"HTTP/1.1"
 #define HTTP_VERSION_1_0_N				10
@@ -377,6 +385,9 @@ _WINDLL_FUNC char *GetHttpHeaderPtr_STATUSCODE( struct HttpEnv *e , int *p_value
 _WINDLL_FUNC int GetHttpHeaderLen_STATUSCODE( struct HttpEnv *e );
 _WINDLL_FUNC char *GetHttpHeaderPtr_REASONPHRASE( struct HttpEnv *e , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderLen_REASONPHRASE( struct HttpEnv *e );
+
+_WINDLL_FUNC char GetHttpHeader_METHOD( struct HttpEnv *e );
+_WINDLL_FUNC char GetHttpHeader_VERSION( struct HttpEnv *e );
 
 _WINDLL_FUNC char *QueryHttpHeaderPtr( struct HttpEnv *e , char *name , int *p_value_len );
 _WINDLL_FUNC int QueryHttpHeaderLen( struct HttpEnv *e , char *name );
