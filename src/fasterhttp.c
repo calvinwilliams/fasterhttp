@@ -55,6 +55,7 @@ struct HttpEnv
 	
 	int			parse_step ;
 	struct HttpHeaders	headers ;
+	char			HEAD_method_flag ;
 	
 	char			*body ;
 	
@@ -592,6 +593,7 @@ struct HttpEnv *CreateHttpEnv()
 	e->headers.header_array_count = 0 ;
 	
 	e->parse_step = FASTERHTTP_PARSESTEP_BEGIN ;
+	e->HEAD_method_flag = 0 ;
 	
 	return e;
 }
@@ -638,6 +640,7 @@ void ResetHttpEnv( struct HttpEnv *e )
 		ReallocHttpBuffer( b , FASTERHTTP_RESPONSE_BUFSIZE_DEFAULT );
 	
 	e->parse_step = FASTERHTTP_PARSESTEP_BEGIN ;
+	e->HEAD_method_flag = 0 ;
 	
 	e->body = NULL ;
 	
@@ -1309,9 +1312,14 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 					p++;
 				}
 				
-
 #define _IF_THEN_GO_PARSING_BODY \
-				if( *(p_content_length) > 0 ) \
+				if( e->HEAD_method_flag == 1 ) \
+				{ \
+					b->process_ptr = p ; \
+					*(p_parse_step) = FASTERHTTP_PARSESTEP_DONE ; \
+					return 0; \
+				} \
+				else if( *(p_content_length) > 0 ) \
 				{ \
 					e->body = p ; \
 					*(p_parse_step) = FASTERHTTP_PARSESTEP_BODY ; \
@@ -1978,7 +1986,14 @@ int ResponseAllHttp( SOCKET sock , SSL *ssl , struct HttpEnv *e , funcProcessHtt
 
 int SendHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 {
-	int		nret = 0 ;
+	char			*p = NULL ;
+	int			nret = 0 ;
+	
+	p = e->request_buffer.base ;
+	if( p && p[0] == HTTP_METHOD_HEAD[0] && p[1] == HTTP_METHOD_HEAD[1] && p[2] == HTTP_METHOD_HEAD[2] && p[3] == HTTP_METHOD_HEAD[3] )
+	{
+		e->HEAD_method_flag = 1 ;
+	}
 	
 	while(1)
 	{
@@ -2207,7 +2222,14 @@ int FormatHttpResponseStartLine( int status_code , struct HttpEnv *e , int fill_
 
 int SendHttpRequestNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 {
-	int		nret = 0 ;
+	char			*p = NULL ;
+	int			nret = 0 ;
+	
+	p = e->request_buffer.base ;
+	if( p && p[0] == HTTP_METHOD_HEAD[0] && p[1] == HTTP_METHOD_HEAD[1] && p[2] == HTTP_METHOD_HEAD[2] && p[3] == HTTP_METHOD_HEAD[3] )
+	{
+		e->HEAD_method_flag = 1 ;
+	}
 	
 	nret = SendHttpBuffer( sock , ssl , e , &(e->request_buffer) , 0 ) ;
 	if( nret )
