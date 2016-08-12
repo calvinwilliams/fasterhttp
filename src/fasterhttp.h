@@ -103,6 +103,12 @@ char *strcasestr(const char *haystack, const char *needle);
 #define CLOSESOCKET	close
 #endif
 
+#if ( defined _WIN32 )
+#define STAT_DIRECTORY(_st_) ((_st_.st_mode)&_S_IFDIR)
+#elif ( defined __unix )
+#define STAT_DIRECTORY(_st_) S_ISDIR(_st_.st_mode)
+#endif
+
 #define HTTP_CONTINUE				100 
 #define HTTP_SWITCHING_PROTOCOL			101 
 #define HTTP_OK					200 
@@ -419,6 +425,8 @@ _WINDLL_FUNC int MemcatHttpBuffer( struct HttpBuffer *b , char *base , int len )
 _WINDLL_FUNC int StrcatHttpBufferFromFile( struct HttpBuffer *b , char *pathfilename , int *p_filesize );
 
 /* util */
+_WINDLL_FUNC int SplitHttpUri( char *wwwroot , char *uri , int uri_len , char **pp_dirname_base , int *p_dirname_len , char **pp_filename_base , int *p_filename_len , char **pp_main_filename_base , int *p_main_filename_len , char **pp_ext_filename_base , int *p_ext_filename_len , char **pp_param_base , int *p_param_len );
+
 #define SetHttpReuseAddr(_sock_) \
 	{ \
 		int	onoff = 1 ; \

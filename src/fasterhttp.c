@@ -1,6 +1,6 @@
 #include "fasterhttp.h"
 
-int			__FASTERHTTP_VERSION_1_0_0 = 0 ;
+int			__FASTERHTTP_VERSION_1_1_1 = 0 ;
 
 struct HttpBuffer
 {
@@ -2534,4 +2534,315 @@ int GetHttpBodyLen( struct HttpEnv *e )
 	return e->headers.content_length;
 }
 
+int SplitHttpUri( char *wwwroot , char *uri , int uri_len , char **pp_dirname_base , int *p_dirname_len , char **pp_filename_base , int *p_filename_len , char **pp_main_filename_base , int *p_main_filename_len , char **pp_ext_filename_base , int *p_ext_filename_len , char **pp_param_base , int *p_param_len )
+{
+	char		*uri_end = uri + uri_len ;
+	char		*p_slash ;
+	char		*p_dot ;
+	char		*p_question_mark ;
+	
+	char		pathfilename[ 256 + 1 ] ;
+	struct stat	st ;
+	
+	char		*p_dirname_base ;
+	int		dirname_len ;
+	char		*p_filename_base ;
+	int		filename_len ;
+	char		*p_main_filename_base ;
+	int		main_filename_len ;
+	char		*p_ext_filename_base ;
+	int		ext_filename_len ;
+	char		*p_param_base ;
+	int		param_len ;
+	
+	char		*p = NULL ;
+	
+	int		nret = 0 ;
+	
+	for( p = uri_end - 1 ; p >= uri ; p-- )
+	{
+		if( (*p) == '/' )
+			break;
+	}
+	if( p >= uri )
+	{
+		p_slash = p ;
+		p++;
+	}
+	else
+	{
+		p_slash = NULL ;
+		p = uri ;
+	}
+	
+	p_dot = NULL ;
+	p_question_mark = NULL ;
+	for( ; p < uri_end ; p++ )
+	{
+		if( (*p) == '.' && p_question_mark == NULL )
+			p_dot = p ;
+		else if( (*p) == '?' )
+			p_question_mark = p ;
+	}
+	
+	p_dirname_base = uri ;
+	if( p_slash == NULL )
+	{
+		if( p_dot == NULL )
+		{
+			if( p_question_mark == NULL )
+			{
+				/* "mydir" */
+				if( wwwroot == NULL )
+				{
+					return 1;
+				}
+				else
+				{
+					memset( pathfilename , 0x00 , sizeof(pathfilename) );
+					snprintf( pathfilename , sizeof(pathfilename) , "%s/%.*s" , wwwroot , uri_len , uri );
+					nret = stat( pathfilename , & st ) ;
+					if( nret == -1 )
+					{
+						return -1;
+					}
+					else if( STAT_DIRECTORY(st) )
+					{
+						p_dirname_base = uri ;
+						dirname_len = uri_len ;
+						p_filename_base = uri ;
+						filename_len = 0 ;
+						p_main_filename_base = uri ;
+						main_filename_len = 0 ;
+						p_ext_filename_base = uri_end ;
+						ext_filename_len = 0 ;
+						p_param_base = uri_end ;
+						param_len = 0 ;
+					}
+					else
+					{
+						p_dirname_base = uri ;
+						dirname_len = 0 ;
+						p_filename_base = uri ;
+						filename_len = uri_len ;
+						p_main_filename_base = uri ;
+						main_filename_len = uri_len ;
+						p_ext_filename_base = uri_end ;
+						ext_filename_len = 0 ;
+						p_param_base = uri_end ;
+						param_len = 0 ;
+					}
+				}
+			}
+			else
+			{
+				/* "mydir?id=123" */
+				memset( pathfilename , 0x00 , sizeof(pathfilename) );
+				snprintf( pathfilename , sizeof(pathfilename) , "%s/%.*s" , wwwroot , (int)(p_question_mark-uri) , uri );
+				nret = stat( pathfilename , & st ) ;
+				if( nret == -1 )
+				{
+					return -1;
+				}
+				else if( STAT_DIRECTORY(st) )
+				{
+					p_dirname_base = uri ;
+					dirname_len = p_question_mark - uri ;
+					p_filename_base = uri ;
+					filename_len = 0 ;
+					p_main_filename_base = uri ;
+					main_filename_len = 0 ;
+					p_ext_filename_base = p_question_mark ;
+					ext_filename_len = 0 ;
+					p_param_base = p_question_mark + 1 ;
+					param_len = uri_end - (p_question_mark+1) ;
+				}
+				else
+				{
+					p_dirname_base = uri ;
+					dirname_len = 0 ;
+					p_filename_base = uri ;
+					filename_len = p_question_mark - uri ;
+					p_main_filename_base = uri ;
+					main_filename_len = p_question_mark - uri ;
+					p_ext_filename_base = p_question_mark ;
+					ext_filename_len = 0 ;
+					p_param_base = p_question_mark + 1 ;
+					param_len = uri_end - (p_question_mark+1) ;
+				}
+			}
+		}
+		else
+		{
+			if( p_question_mark == NULL )
+			{
+				/* "index.html" */
+				p_dirname_base = uri ;
+				dirname_len = 0 ;
+				p_filename_base = uri ;
+				filename_len = uri_len ;
+				p_main_filename_base = uri ;
+				main_filename_len = p_dot - uri ;
+				p_ext_filename_base = p_dot + 1 ;
+				ext_filename_len = uri_end - (p_dot+1) ;
+				p_param_base = uri_end ;
+				param_len = 0 ;
+			}
+			else
+			{
+				/* "index.html?id=123" */
+				p_dirname_base = uri ;
+				dirname_len = 0 ;
+				p_filename_base = uri ;
+				filename_len = p_question_mark - uri ;
+				p_main_filename_base = uri ;
+				main_filename_len = p_dot - uri ;
+				p_ext_filename_base = p_dot + 1 ;
+				ext_filename_len = p_question_mark - (p_dot+1) ;
+				p_param_base = p_question_mark + 1 ;
+				param_len = uri_end - (p_question_mark+1) ;
+			}
+		}
+	}
+	else
+	{
+		if( p_dot == NULL )
+		{
+			if( p_question_mark == NULL )
+			{
+				/* "/mydir" */
+				if( wwwroot == NULL )
+				{
+					return 1;
+				}
+				else
+				{
+					memset( pathfilename , 0x00 , sizeof(pathfilename) );
+					snprintf( pathfilename , sizeof(pathfilename) , "%s%.*s" , wwwroot , uri_len , uri );
+					nret = stat( pathfilename , & st ) ;
+					if( nret == -1 )
+					{
+						return -1;
+					}
+					else if( STAT_DIRECTORY(st) )
+					{
+						p_dirname_base = uri ;
+						dirname_len = uri_len ;
+						p_filename_base = uri ;
+						filename_len = 0 ;
+						p_main_filename_base = uri ;
+						main_filename_len = 0 ;
+						p_ext_filename_base = uri_end ;
+						ext_filename_len = 0 ;
+						p_param_base = uri_end ;
+						param_len = 0 ;
+					}
+					else
+					{
+						p_dirname_base = uri ;
+						dirname_len = p_slash - uri ;
+						p_filename_base = p_slash + 1 ;
+						filename_len = uri_end - (p_slash+1) ;
+						p_main_filename_base = p_slash + 1 ;
+						main_filename_len = uri_end - (p_slash+1) ;
+						p_ext_filename_base = p_slash + 1 ;
+						ext_filename_len = 0 ;
+						p_param_base = p_slash + 1 ;
+						param_len = 0 ;
+					}
+				}
+			}
+			else
+			{
+				/* "/mydir?id=123" */
+				memset( pathfilename , 0x00 , sizeof(pathfilename) );
+				snprintf( pathfilename , sizeof(pathfilename) , "%s%.*s" , wwwroot , (int)(p_question_mark-uri) , uri );
+				nret = stat( pathfilename , & st ) ;
+				if( nret == -1 )
+				{
+					return -1;
+				}
+				else if( STAT_DIRECTORY(st) )
+				{
+					p_dirname_base = uri ;
+					dirname_len = p_question_mark - uri ;
+					p_filename_base = uri ;
+					filename_len = 0 ;
+					p_main_filename_base = p_question_mark ;
+					main_filename_len = 0 ;
+					p_ext_filename_base = p_question_mark ;
+					ext_filename_len = 0 ;
+					p_param_base = p_question_mark + 1 ;
+					param_len = uri_end - (p_question_mark+1) ;
+				}
+				else
+				{
+					p_dirname_base = uri ;
+					dirname_len = p_slash - uri ;
+					p_filename_base = p_slash + 1 ;
+					filename_len = p_question_mark - (p_slash+1) ;
+					p_main_filename_base = p_slash + 1 ;
+					main_filename_len = p_question_mark - (p_slash+1) ;
+					p_ext_filename_base = p_slash + 1 ;
+					ext_filename_len = 0 ;
+					p_param_base = p_question_mark + 1 ;
+					param_len = uri_end - (p_question_mark+1) ;
+				}
+			}
+		}
+		else
+		{
+			if( p_question_mark == NULL )
+			{
+				/* "/mydir/index.html" */
+				p_dirname_base = uri ;
+				dirname_len = p_slash - uri ;
+				p_filename_base = p_slash + 1 ;
+				filename_len = uri_end - p_slash ;
+				p_main_filename_base = p_slash + 1 ;
+				main_filename_len = p_dot - (p_slash+1) ;
+				p_ext_filename_base = p_dot + 1 ;
+				ext_filename_len = uri_end - (p_dot+1) ;
+				p_param_base = uri ;
+				param_len = 0 ;
+			}
+			else
+			{
+				/* "/mydir/index.html?id=123" */
+				p_dirname_base = uri ;
+				dirname_len = p_slash - uri ;
+				p_filename_base = p_slash + 1 ;
+				filename_len = p_question_mark - (p_slash+1) ;
+				p_main_filename_base = p_slash + 1 ;
+				main_filename_len = p_dot - (p_slash+1) ;
+				p_ext_filename_base = p_dot + 1 ;
+				ext_filename_len = p_question_mark - (p_dot+1) ;
+				p_param_base = p_question_mark + 1 ;
+				param_len = uri_end - (p_question_mark+1) ;
+			}
+		}
+	}
+	
+	if( pp_dirname_base )
+		(*pp_dirname_base) = p_dirname_base ;
+	if( p_dirname_len )
+		(*p_dirname_len) = dirname_len ;
+	if( pp_filename_base )
+		(*pp_filename_base) = p_filename_base ;
+	if( p_filename_len )
+		(*p_filename_len) = filename_len ;
+	if( pp_main_filename_base )
+		(*pp_main_filename_base) = p_main_filename_base ;
+	if( p_main_filename_len )
+		(*p_main_filename_len) = main_filename_len ;
+	if( pp_ext_filename_base )
+		(*pp_ext_filename_base) = p_ext_filename_base ;
+	if( p_ext_filename_len )
+		(*p_ext_filename_len) = ext_filename_len ;
+	if( pp_param_base )
+		(*pp_param_base) = p_param_base ;
+	if( p_param_len )
+		(*p_param_len) = param_len ;
+	return 0;
+}
 
