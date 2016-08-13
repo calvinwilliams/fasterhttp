@@ -105,7 +105,7 @@ char *strcasestr(const char *haystack, const char *needle);
 
 #if ( defined _WIN32 )
 #define STAT_DIRECTORY(_st_) ((_st_.st_mode)&_S_IFDIR)
-#elif ( defined __unix )
+#elif ( defined __unix ) || ( defined __linux__ )
 #define STAT_DIRECTORY(_st_) S_ISDIR(_st_.st_mode)
 #endif
 
