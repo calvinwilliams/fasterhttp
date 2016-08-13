@@ -43,7 +43,7 @@ char *strcasestr(const char *haystack, const char *needle);
 #endif
 #elif ( defined __unix ) || ( defined __linux__ )
 #ifndef _WINDLL_FUNC
-#define _WINDLL_FUNC
+#define _WINDLL_FUNC		extern
 #endif
 #endif
 
@@ -425,7 +425,21 @@ _WINDLL_FUNC int MemcatHttpBuffer( struct HttpBuffer *b , char *base , int len )
 _WINDLL_FUNC int StrcatHttpBufferFromFile( struct HttpBuffer *b , char *pathfilename , int *p_filesize );
 
 /* util */
-_WINDLL_FUNC int SplitHttpUri( char *wwwroot , char *uri , int uri_len , char **pp_dirname_base , int *p_dirname_len , char **pp_filename_base , int *p_filename_len , char **pp_main_filename_base , int *p_main_filename_len , char **pp_ext_filename_base , int *p_ext_filename_len , char **pp_param_base , int *p_param_len );
+struct HttpUri
+{
+	char				*dirname_base ;
+	int				dirname_len ;
+	char				*filename_base ;
+	int				filename_len ;
+	char				*main_filename_base ;
+	int				main_filename_len ;
+	char				*ext_filename_base ;
+	int				ext_filename_len ;
+	char				*param_base ;
+	int				param_len ;
+} ;
+
+_WINDLL_FUNC int SplitHttpUri( char *wwwroot , char *uri , int uri_len , struct HttpUri *p_httpuri );
 
 #define SetHttpReuseAddr(_sock_) \
 	{ \
