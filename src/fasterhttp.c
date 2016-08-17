@@ -1,6 +1,6 @@
 #include "fasterhttp.h"
 
-int			__FASTERHTTP_VERSION_1_0_0 = 0 ;
+int			__FASTERHTTP_VERSION_1_1_1 = 0 ;
 
 struct HttpBuffer
 {
@@ -22,6 +22,7 @@ struct HttpHeader
 struct HttpHeaders
 {
 	struct HttpHeader	METHOD ;
+	char			method ;
 	struct HttpHeader	URI ;
 	struct HttpHeader	VERSION ;
 	char			version ;	/* 1.0 -> 10 */
@@ -124,20 +125,6 @@ void _DumpHexBuffer( FILE *fp , char *buf , long buflen )
 		row_offset++;
 	}
 	
-	return;
-}
-
-void SetHttpNonblock( int sock )
-{
-#if ( defined __linux ) || ( defined __unix )
-	int	opts;
-	opts = fcntl( sock , F_GETFL );
-	opts = opts | O_NONBLOCK ;
-	fcntl( sock , F_SETFL , opts );
-#elif ( defined _WIN32 )
-	u_long	mode = 1 ;
-	ioctlsocket( sock , FIONBIO , & mode );
-#endif
 	return;
 }
 
@@ -615,6 +602,9 @@ void ResetHttpEnv( struct HttpEnv *e )
 	struct HttpHeaders	*p_headers = &(e->headers) ;
 	struct HttpBuffer	*b = NULL ;
 	
+	if( e == NULL )
+		return;
+	
 	/* struct HttpEnv */
 	
 	ResetHttpTimeout( e );
@@ -661,11 +651,12 @@ void ResetHttpEnv( struct HttpEnv *e )
 	
 	p_headers->METHOD.value_ptr = NULL ;
 	p_headers->METHOD.value_len = 0 ;
+	p_headers->method = 0 ;
 	p_headers->URI.value_ptr = NULL ;
 	p_headers->URI.value_len = 0 ;
 	p_headers->VERSION.value_ptr = NULL ;
 	p_headers->VERSION.value_len = 0 ;
-	//p_headers->version = 0 ; 和connection__keepalive遗留到下一个HTTP请求
+	p_headers->version = 0 ;
 	p_headers->STATUSCODE.value_ptr = NULL ;
 	p_headers->STATUSCODE.value_len = 0 ;
 	p_headers->REASONPHRASE.value_ptr = NULL ;
@@ -674,7 +665,7 @@ void ResetHttpEnv( struct HttpEnv *e )
 	p_headers->TRAILER.value_ptr = NULL ;
 	p_headers->TRAILER.value_len = 0 ;
 	p_headers->transfer_encoding__chunked = 0 ;
-	//p_headers->connection__keepalive = 0 ;
+	p_headers->connection__keepalive = 0 ;
 	
 	if( UNLIKELY( p_headers->header_array_size > FASTERHTTP_HEADER_ARRAYSIZE_MAX ) )
 	{
@@ -765,7 +756,11 @@ static int SendHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struct H
 	else
 		len = (int)SSL_write( ssl , b->process_ptr , b->fill_ptr-b->process_ptr ) ;
 	if( len == -1 )
+	{
+		if( errno == EAGAIN || errno == EWOULDBLOCK )
+			return FASTERHTTP_INFO_TCP_SEND_WOULDBLOCK;
 		return FASTERHTTP_ERROR_TCP_SEND;
+	}
 	
 #if DEBUG_COMM
 printf( "send\n" );
@@ -827,7 +822,7 @@ static int ReceiveHttpBuffer( SOCKET sock , SSL *ssl , struct HttpEnv *e , struc
 		len = (int)SSL_read( ssl , b->fill_ptr , b->buf_size-1 - (b->fill_ptr-b->base) ) ;
 	if( len == -1 )
 	{
-		if( errno == EWOULDBLOCK )
+		if( errno == EAGAIN || errno == EWOULDBLOCK )
 			return FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER;
 		else if( errno == ECONNRESET )
 			return FASTERHTTP_ERROR_TCP_CLOSE;
@@ -936,6 +931,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 	struct HttpHeader	*p_header = &(e->headers.header_array[e->headers.header_array_count]) ;
 	char			*fill_ptr = b->fill_ptr ;
 	
+	char			*p_method = &(e->headers.method) ;
 	char			*p_version = &(e->headers.version) ;
 	int			*p_content_length = &(e->headers.content_length) ;
 	char			*p_transfer_encoding__chunked = &(e->headers.transfer_encoding__chunked) ;
@@ -1004,9 +1000,9 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			if( LIKELY( p_METHOD->value_len == 3 ) )
 			{
 				if( LIKELY( *(p2) == HTTP_METHOD_GET[0] && *(p2+1) == HTTP_METHOD_GET[1] && *(p2+2) == HTTP_METHOD_GET[2] ) )
-					;
+					(*p_method) = HTTP_METHOD_GET_N ;
 				else if( *(p2) == HTTP_METHOD_PUT[0] && *(p2+1) == HTTP_METHOD_PUT[1] && *(p2+2) == HTTP_METHOD_PUT[2] )
-					;
+					(*p_method) = HTTP_METHOD_PUT_N ;
 				else
 					return FASTERHTTP_ERROR_METHOD_INVALID;
 			}
@@ -1014,10 +1010,10 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			{
 				if( LIKELY( *(p2) == HTTP_METHOD_POST[0] && *(p2+1) == HTTP_METHOD_POST[1] && *(p2+2) == HTTP_METHOD_POST[2]
 					&& *(p2+3) == HTTP_METHOD_POST[3] ) )
-					;
+					(*p_method) = HTTP_METHOD_POST_N ;
 				else if( *(p2) == HTTP_METHOD_HEAD[0] && *(p2+1) == HTTP_METHOD_HEAD[1] && *(p2+2) == HTTP_METHOD_HEAD[2]
 					&& *(p2+3) == HTTP_METHOD_HEAD[3] )
-					;
+					(*p_method) = HTTP_METHOD_HEAD_N ;
 				else
 					return FASTERHTTP_ERROR_METHOD_INVALID;
 			}
@@ -1025,7 +1021,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			{
 				if( *(p2) == HTTP_METHOD_TRACE[0] && *(p2+1) == HTTP_METHOD_TRACE[1] && *(p2+2) == HTTP_METHOD_TRACE[2]
 					&& *(p2+3) == HTTP_METHOD_TRACE[3] && *(p2+4) == HTTP_METHOD_TRACE[4] )
-					;
+					(*p_method) = HTTP_METHOD_TRACE_N ;
 				else
 					return FASTERHTTP_ERROR_METHOD_INVALID;
 			}
@@ -1033,7 +1029,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 			{
 				if( *(p2) == HTTP_METHOD_DELETE[0] && *(p2+1) == HTTP_METHOD_DELETE[1] && *(p2+2) == HTTP_METHOD_DELETE[2]
 					&& *(p2+3) == HTTP_METHOD_DELETE[3] && *(p2+4) == HTTP_METHOD_DELETE[4] && *(p2+5) == HTTP_METHOD_DELETE[5] )
-					;
+					(*p_method) = HTTP_METHOD_DELETE_N ;
 				else
 					return FASTERHTTP_ERROR_METHOD_INVALID;
 			}
@@ -1042,7 +1038,7 @@ int ParseHttpBuffer( struct HttpEnv *e , struct HttpBuffer *b )
 				if( *(p2) == HTTP_METHOD_OPTIONS[0] && *(p2+1) == HTTP_METHOD_OPTIONS[1] && *(p2+2) == HTTP_METHOD_OPTIONS[2]
 					&& *(p2+3) == HTTP_METHOD_OPTIONS[3] && *(p2+4) == HTTP_METHOD_OPTIONS[4] && *(p2+5) == HTTP_METHOD_OPTIONS[5]
 					&& *(p2+6) == HTTP_METHOD_OPTIONS[6] )
-					;
+					(*p_method) = HTTP_METHOD_OPTIONS_N ;
 				else
 					return FASTERHTTP_ERROR_METHOD_INVALID;
 			}
@@ -1316,9 +1312,14 @@ _GOTO_PARSESTEP_HEADER_NAME0 :
 					p++;
 				}
 				
-
 #define _IF_THEN_GO_PARSING_BODY \
-				if( *(p_content_length) > 0 ) \
+				if( e->headers.method == HTTP_METHOD_HEAD_N ) \
+				{ \
+					b->process_ptr = p ; \
+					*(p_parse_step) = FASTERHTTP_PARSESTEP_DONE ; \
+					return 0; \
+				} \
+				else if( *(p_content_length) > 0 ) \
 				{ \
 					e->body = p ; \
 					*(p_parse_step) = FASTERHTTP_PARSESTEP_BODY ; \
@@ -1985,7 +1986,14 @@ int ResponseAllHttp( SOCKET sock , SSL *ssl , struct HttpEnv *e , funcProcessHtt
 
 int SendHttpRequest( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 {
-	int		nret = 0 ;
+	char			*p = NULL ;
+	int			nret = 0 ;
+	
+	p = e->request_buffer.base ;
+	if( p && p[0] == HTTP_METHOD_HEAD[0] && p[1] == HTTP_METHOD_HEAD[1] && p[2] == HTTP_METHOD_HEAD[2] && p[3] == HTTP_METHOD_HEAD[3] )
+	{
+		e->headers.method = HTTP_METHOD_HEAD_N ;
+	}
 	
 	while(1)
 	{
@@ -2201,9 +2209,9 @@ int FormatHttpResponseStartLine( int status_code , struct HttpEnv *e , int fill_
 		nret = StrcatfHttpBuffer( b	, "Content-length: %d%s"
 						"%s"
 						"%s %s"
-						, strlen(p_status_code_s)+1+strlen(p_status_text) , HTTP_RETURN_NEWLINE
+						, strlen(p_status_text) , HTTP_RETURN_NEWLINE
 						, HTTP_RETURN_NEWLINE
-						, p_status_code_s , p_status_text
+						, p_status_text
 						) ;
 		if( nret )
 			return nret;
@@ -2214,7 +2222,14 @@ int FormatHttpResponseStartLine( int status_code , struct HttpEnv *e , int fill_
 
 int SendHttpRequestNonblock( SOCKET sock , SSL *ssl , struct HttpEnv *e )
 {
-	int		nret = 0 ;
+	char			*p = NULL ;
+	int			nret = 0 ;
+	
+	p = e->request_buffer.base ;
+	if( p && p[0] == HTTP_METHOD_HEAD[0] && p[1] == HTTP_METHOD_HEAD[1] && p[2] == HTTP_METHOD_HEAD[2] && p[3] == HTTP_METHOD_HEAD[3] )
+	{
+		e->headers.method = HTTP_METHOD_HEAD_N ;
+	}
 	
 	nret = SendHttpBuffer( sock , ssl , e , &(e->request_buffer) , 0 ) ;
 	if( nret )
@@ -2394,6 +2409,16 @@ int GetHttpHeaderLen_REASONPHRASE( struct HttpEnv *e )
 	return e->headers.REASONPHRASE.value_len;
 }
 
+char GetHttpHeader_METHOD( struct HttpEnv *e )
+{
+	return e->headers.method;
+}
+
+char GetHttpHeader_VERSION( struct HttpEnv *e )
+{
+	return e->headers.version;
+}
+
 struct HttpHeader *QueryHttpHeader( struct HttpEnv *e , char *name )
 {
 	int			i ;
@@ -2509,4 +2534,283 @@ int GetHttpBodyLen( struct HttpEnv *e )
 	return e->headers.content_length;
 }
 
+int SplitHttpUri( char *wwwroot , char *uri , int uri_len , struct HttpUri *p_httpuri )
+{
+	char		*uri_end = uri + uri_len ;
+	char		*p_slash ;
+	char		*p_dot ;
+	char		*p_question_mark ;
+	
+	char		pathfilename[ 256 + 1 ] ;
+	struct stat	st ;
+	
+	char		*p = NULL ;
+	
+	int		nret = 0 ;
+	
+	for( p = uri_end - 1 ; p >= uri ; p-- )
+	{
+		if( (*p) == '/' )
+			break;
+	}
+	if( p >= uri )
+	{
+		p_slash = p ;
+		p++;
+	}
+	else
+	{
+		p_slash = NULL ;
+		p = uri ;
+	}
+	
+	p_dot = NULL ;
+	p_question_mark = NULL ;
+	for( ; p < uri_end ; p++ )
+	{
+		if( (*p) == '.' && p_question_mark == NULL )
+			p_dot = p ;
+		else if( (*p) == '?' )
+			p_question_mark = p ;
+	}
+	
+	if( p_slash == NULL )
+	{
+		if( p_dot == NULL )
+		{
+			if( p_question_mark == NULL )
+			{
+				/* "mydir" */
+				if( wwwroot == NULL )
+				{
+					return 1;
+				}
+				else
+				{
+					memset( pathfilename , 0x00 , sizeof(pathfilename) );
+					snprintf( pathfilename , sizeof(pathfilename) , "%s/%.*s" , wwwroot , uri_len , uri );
+					nret = stat( pathfilename , & st ) ;
+					if( nret == -1 )
+					{
+						return -1;
+					}
+					else if( STAT_DIRECTORY(st) )
+					{
+						p_httpuri->dirname_base = uri ;
+						p_httpuri->dirname_len = uri_len ;
+						p_httpuri->filename_base = uri ;
+						p_httpuri->filename_len = 0 ;
+						p_httpuri->main_filename_base = uri ;
+						p_httpuri->main_filename_len = 0 ;
+						p_httpuri->ext_filename_base = uri_end ;
+						p_httpuri->ext_filename_len = 0 ;
+						p_httpuri->param_base = uri_end ;
+						p_httpuri->param_len = 0 ;
+					}
+					else
+					{
+						p_httpuri->dirname_base = uri ;
+						p_httpuri->dirname_len = 0 ;
+						p_httpuri->filename_base = uri ;
+						p_httpuri->filename_len = uri_len ;
+						p_httpuri->main_filename_base = uri ;
+						p_httpuri->main_filename_len = uri_len ;
+						p_httpuri->ext_filename_base = uri_end ;
+						p_httpuri->ext_filename_len = 0 ;
+						p_httpuri->param_base = uri_end ;
+						p_httpuri->param_len = 0 ;
+					}
+				}
+			}
+			else
+			{
+				/* "mydir?id=123" */
+				memset( pathfilename , 0x00 , sizeof(pathfilename) );
+				snprintf( pathfilename , sizeof(pathfilename) , "%s/%.*s" , wwwroot , (int)(p_question_mark-uri) , uri );
+				nret = stat( pathfilename , & st ) ;
+				if( nret == -1 )
+				{
+					return -1;
+				}
+				else if( STAT_DIRECTORY(st) )
+				{
+					p_httpuri->dirname_base = uri ;
+					p_httpuri->dirname_len = p_question_mark - uri ;
+					p_httpuri->filename_base = uri ;
+					p_httpuri->filename_len = 0 ;
+					p_httpuri->main_filename_base = uri ;
+					p_httpuri->main_filename_len = 0 ;
+					p_httpuri->ext_filename_base = p_question_mark ;
+					p_httpuri->ext_filename_len = 0 ;
+					p_httpuri->param_base = p_question_mark + 1 ;
+					p_httpuri->param_len = uri_end - (p_question_mark+1) ;
+				}
+				else
+				{
+					p_httpuri->dirname_base = uri ;
+					p_httpuri->dirname_len = 0 ;
+					p_httpuri->filename_base = uri ;
+					p_httpuri->filename_len = p_question_mark - uri ;
+					p_httpuri->main_filename_base = uri ;
+					p_httpuri->main_filename_len = p_question_mark - uri ;
+					p_httpuri->ext_filename_base = p_question_mark ;
+					p_httpuri->ext_filename_len = 0 ;
+					p_httpuri->param_base = p_question_mark + 1 ;
+					p_httpuri->param_len = uri_end - (p_question_mark+1) ;
+				}
+			}
+		}
+		else
+		{
+			if( p_question_mark == NULL )
+			{
+				/* "index.html" */
+				p_httpuri->dirname_base = uri ;
+				p_httpuri->dirname_len = 0 ;
+				p_httpuri->filename_base = uri ;
+				p_httpuri->filename_len = uri_len ;
+				p_httpuri->main_filename_base = uri ;
+				p_httpuri->main_filename_len = p_dot - uri ;
+				p_httpuri->ext_filename_base = p_dot + 1 ;
+				p_httpuri->ext_filename_len = uri_end - (p_dot+1) ;
+				p_httpuri->param_base = uri_end ;
+				p_httpuri->param_len = 0 ;
+			}
+			else
+			{
+				/* "index.html?id=123" */
+				p_httpuri->dirname_base = uri ;
+				p_httpuri->dirname_len = 0 ;
+				p_httpuri->filename_base = uri ;
+				p_httpuri->filename_len = p_question_mark - uri ;
+				p_httpuri->main_filename_base = uri ;
+				p_httpuri->main_filename_len = p_dot - uri ;
+				p_httpuri->ext_filename_base = p_dot + 1 ;
+				p_httpuri->ext_filename_len = p_question_mark - (p_dot+1) ;
+				p_httpuri->param_base = p_question_mark + 1 ;
+				p_httpuri->param_len = uri_end - (p_question_mark+1) ;
+			}
+		}
+	}
+	else
+	{
+		if( p_dot == NULL )
+		{
+			if( p_question_mark == NULL )
+			{
+				/* "/mydir" */
+				if( wwwroot == NULL )
+				{
+					return 1;
+				}
+				else
+				{
+					memset( pathfilename , 0x00 , sizeof(pathfilename) );
+					snprintf( pathfilename , sizeof(pathfilename) , "%s%.*s" , wwwroot , uri_len , uri );
+					nret = stat( pathfilename , & st ) ;
+					if( nret == -1 )
+					{
+						return -1;
+					}
+					else if( STAT_DIRECTORY(st) )
+					{
+						p_httpuri->dirname_base = uri ;
+						p_httpuri->dirname_len = uri_len ;
+						p_httpuri->filename_base = uri ;
+						p_httpuri->filename_len = 0 ;
+						p_httpuri->main_filename_base = uri ;
+						p_httpuri->main_filename_len = 0 ;
+						p_httpuri->ext_filename_base = uri_end ;
+						p_httpuri->ext_filename_len = 0 ;
+						p_httpuri->param_base = uri_end ;
+						p_httpuri->param_len = 0 ;
+					}
+					else
+					{
+						p_httpuri->dirname_base = uri ;
+						p_httpuri->dirname_len = p_slash - uri ;
+						p_httpuri->filename_base = p_slash + 1 ;
+						p_httpuri->filename_len = uri_end - (p_slash+1) ;
+						p_httpuri->main_filename_base = p_slash + 1 ;
+						p_httpuri->main_filename_len = uri_end - (p_slash+1) ;
+						p_httpuri->ext_filename_base = p_slash + 1 ;
+						p_httpuri->ext_filename_len = 0 ;
+						p_httpuri->param_base = p_slash + 1 ;
+						p_httpuri->param_len = 0 ;
+					}
+				}
+			}
+			else
+			{
+				/* "/mydir?id=123" */
+				memset( pathfilename , 0x00 , sizeof(pathfilename) );
+				snprintf( pathfilename , sizeof(pathfilename) , "%s%.*s" , wwwroot , (int)(p_question_mark-uri) , uri );
+				nret = stat( pathfilename , & st ) ;
+				if( nret == -1 )
+				{
+					return -1;
+				}
+				else if( STAT_DIRECTORY(st) )
+				{
+					p_httpuri->dirname_base = uri ;
+					p_httpuri->dirname_len = p_question_mark - uri ;
+					p_httpuri->filename_base = uri ;
+					p_httpuri->filename_len = 0 ;
+					p_httpuri->main_filename_base = p_question_mark ;
+					p_httpuri->main_filename_len = 0 ;
+					p_httpuri->ext_filename_base = p_question_mark ;
+					p_httpuri->ext_filename_len = 0 ;
+					p_httpuri->param_base = p_question_mark + 1 ;
+					p_httpuri->param_len = uri_end - (p_question_mark+1) ;
+				}
+				else
+				{
+					p_httpuri->dirname_base = uri ;
+					p_httpuri->dirname_len = p_slash - uri ;
+					p_httpuri->filename_base = p_slash + 1 ;
+					p_httpuri->filename_len = p_question_mark - (p_slash+1) ;
+					p_httpuri->main_filename_base = p_slash + 1 ;
+					p_httpuri->main_filename_len = p_question_mark - (p_slash+1) ;
+					p_httpuri->ext_filename_base = p_slash + 1 ;
+					p_httpuri->ext_filename_len = 0 ;
+					p_httpuri->param_base = p_question_mark + 1 ;
+					p_httpuri->param_len = uri_end - (p_question_mark+1) ;
+				}
+			}
+		}
+		else
+		{
+			if( p_question_mark == NULL )
+			{
+				/* "/mydir/index.html" */
+				p_httpuri->dirname_base = uri ;
+				p_httpuri->dirname_len = p_slash - uri ;
+				p_httpuri->filename_base = p_slash + 1 ;
+				p_httpuri->filename_len = uri_end - p_slash ;
+				p_httpuri->main_filename_base = p_slash + 1 ;
+				p_httpuri->main_filename_len = p_dot - (p_slash+1) ;
+				p_httpuri->ext_filename_base = p_dot + 1 ;
+				p_httpuri->ext_filename_len = uri_end - (p_dot+1) ;
+				p_httpuri->param_base = uri ;
+				p_httpuri->param_len = 0 ;
+			}
+			else
+			{
+				/* "/mydir/index.html?id=123" */
+				p_httpuri->dirname_base = uri ;
+				p_httpuri->dirname_len = p_slash - uri ;
+				p_httpuri->filename_base = p_slash + 1 ;
+				p_httpuri->filename_len = p_question_mark - (p_slash+1) ;
+				p_httpuri->main_filename_base = p_slash + 1 ;
+				p_httpuri->main_filename_len = p_dot - (p_slash+1) ;
+				p_httpuri->ext_filename_base = p_dot + 1 ;
+				p_httpuri->ext_filename_len = p_question_mark - (p_dot+1) ;
+				p_httpuri->param_base = p_question_mark + 1 ;
+				p_httpuri->param_len = uri_end - (p_question_mark+1) ;
+			}
+		}
+	}
+	
+	return 0;
+}
 

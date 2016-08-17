@@ -19,6 +19,8 @@ HDER		= \
 
 HDERINST	=	$(_HDERINST)
 
+NOINST_OBJ	=	test_SplitHttpUri
+
 ###### ±‡“Î—°œÓ
 CFLAGS		=	$(_CFLAGS) \
 
@@ -46,3 +48,6 @@ include $(MKTPLDIR)/makeobj_$(MKTPLOS).inc
 libfasterhttp.so		:	$(c_FILE_o)
 	$(CC) -o $@ $(c_FILE_o) $(SOFLAGS) $(LFLAGS)
 
+test_SplitHttpUri		:	test_SplitHttpUri.o libfasterhttp.so
+	$(CC) -o $@ test_SplitHttpUri.o libfasterhttp.so $(ESOFLAGS) $(LFLAGS)
+	

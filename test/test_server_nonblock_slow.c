@@ -59,6 +59,9 @@ int test_server_nonblock_slow()
 	
 	struct HttpEnv		*e = NULL ;
 	
+	fd_set			read_fds ;
+	fd_set			write_fds ;
+	
 	int			nret = 0 ;
 	
 	listen_sock = socket( AF_INET , SOCK_STREAM , IPPROTO_TCP ) ;
@@ -116,6 +119,20 @@ int test_server_nonblock_slow()
 		{
 			while(1)
 			{
+				FD_ZERO( & read_fds );
+				FD_SET( accept_sock , & read_fds );
+				nret = select( accept_sock+1 , & read_fds , NULL , NULL , GetHttpElapse(e) ) ;
+				if( nret == 0 )
+				{
+					nret = FASTERHTTP_ERROR_TCP_SELECT_RECEIVE_TIMEOUT ;
+					break;
+				}
+				else if( nret != 1 )
+				{
+					nret = FASTERHTTP_ERROR_TCP_SELECT_RECEIVE ;
+					break;
+				}
+				
 				nret = ReceiveHttpRequestNonblock1( accept_sock , NULL , e ) ;
 				if( nret == FASTERHTTP_INFO_NEED_MORE_HTTP_BUFFER )
 				{
@@ -160,6 +177,20 @@ int test_server_nonblock_slow()
 			
 			while(1)
 			{
+				FD_ZERO( & write_fds );
+				FD_SET( accept_sock , & write_fds );
+				nret = select( accept_sock+1 , NULL , & write_fds , NULL , GetHttpElapse(e) ) ;
+				if( nret == 0 )
+				{
+					nret = FASTERHTTP_ERROR_TCP_SELECT_SEND_TIMEOUT ;
+					break;
+				}
+				else if( nret != 1 )
+				{
+					nret = FASTERHTTP_ERROR_TCP_SELECT_SEND ;
+					break;
+				}
+				
 				nret = SendHttpResponseNonblock( accept_sock , NULL , e ) ;
 				if( nret == FASTERHTTP_INFO_TCP_SEND_WOULDBLOCK )
 				{

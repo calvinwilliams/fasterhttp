@@ -43,16 +43,18 @@ char *strcasestr(const char *haystack, const char *needle);
 #endif
 #elif ( defined __unix ) || ( defined __linux__ )
 #ifndef _WINDLL_FUNC
-#define _WINDLL_FUNC
+#define _WINDLL_FUNC		extern
 #endif
 #endif
 
+#ifndef LIKELY
 #if __GNUC__ >= 3
 #define LIKELY(x) __builtin_expect(!!(x), 1)
 #define UNLIKELY(x) __builtin_expect(!!(x), 0)
 #else
 #define LIKELY(x) (x)
 #define UNLIKELY(x) (x)
+#endif
 #endif
 
 #ifndef STRCMP
@@ -99,6 +101,12 @@ char *strcasestr(const char *haystack, const char *needle);
 #define SOCKET		int
 #define SOCKLEN_T	socklen_t
 #define CLOSESOCKET	close
+#endif
+
+#if ( defined _WIN32 )
+#define STAT_DIRECTORY(_st_) ((_st_.st_mode)&_S_IFDIR)
+#elif ( defined __unix ) || ( defined __linux__ )
+#define STAT_DIRECTORY(_st_) S_ISDIR(_st_.st_mode)
 #endif
 
 #define HTTP_CONTINUE				100 
@@ -247,13 +255,13 @@ char *strcasestr(const char *haystack, const char *needle);
 
 #define FASTERHTTP_TIMEOUT_DEFAULT			60
 
-#define FASTERHTTP_REQUEST_BUFSIZE_DEFAULT		40*1024
-#define FASTERHTTP_RESPONSE_BUFSIZE_DEFAULT		400*1024
-#define FASTERHTTP_HEADER_ARRAYSIZE_DEFAULT		64
+#define FASTERHTTP_REQUEST_BUFSIZE_DEFAULT		1*1024
+#define FASTERHTTP_RESPONSE_BUFSIZE_DEFAULT		4*1024
+#define FASTERHTTP_HEADER_ARRAYSIZE_DEFAULT		16
 
-#define FASTERHTTP_REQUEST_BUFSIZE_MAX			10*1024*1024
-#define FASTERHTTP_RESPONSE_BUFSIZE_MAX			10*1024*1024
-#define FASTERHTTP_HEADER_ARRAYSIZE_MAX			1024
+#define FASTERHTTP_REQUEST_BUFSIZE_MAX			1024*1024
+#define FASTERHTTP_RESPONSE_BUFSIZE_MAX			1024*1024
+#define FASTERHTTP_HEADER_ARRAYSIZE_MAX			64
 
 #define FASTERHTTP_PARSESTEP_BEGIN				0
 #define FASTERHTTP_PARSESTEP_REQUESTSTARTLINE_METHOD0		110
@@ -294,6 +302,14 @@ char *strcasestr(const char *haystack, const char *needle);
 #define HTTP_METHOD_OPTIONS				"OPTIONS"
 #define HTTP_METHOD_PUT					"PUT"
 #define HTTP_METHOD_DELETE				"DELETE"
+
+#define HTTP_METHOD_GET_N				1
+#define HTTP_METHOD_POST_N				2
+#define HTTP_METHOD_HEAD_N				3
+#define HTTP_METHOD_TRACE_N				4
+#define HTTP_METHOD_OPTIONS_N				5
+#define HTTP_METHOD_PUT_N				6
+#define HTTP_METHOD_DELETE_N				7
 
 #define HTTP_VERSION_1_0				"HTTP/1.0"
 #define HTTP_VERSION_1_1				"HTTP/1.1"
@@ -376,6 +392,9 @@ _WINDLL_FUNC int GetHttpHeaderLen_STATUSCODE( struct HttpEnv *e );
 _WINDLL_FUNC char *GetHttpHeaderPtr_REASONPHRASE( struct HttpEnv *e , int *p_value_len );
 _WINDLL_FUNC int GetHttpHeaderLen_REASONPHRASE( struct HttpEnv *e );
 
+_WINDLL_FUNC char GetHttpHeader_METHOD( struct HttpEnv *e );
+_WINDLL_FUNC char GetHttpHeader_VERSION( struct HttpEnv *e );
+
 _WINDLL_FUNC char *QueryHttpHeaderPtr( struct HttpEnv *e , char *name , int *p_value_len );
 _WINDLL_FUNC int QueryHttpHeaderLen( struct HttpEnv *e , char *name );
 _WINDLL_FUNC int CountHttpHeaders( struct HttpEnv *e );
@@ -406,7 +425,86 @@ _WINDLL_FUNC int MemcatHttpBuffer( struct HttpBuffer *b , char *base , int len )
 _WINDLL_FUNC int StrcatHttpBufferFromFile( struct HttpBuffer *b , char *pathfilename , int *p_filesize );
 
 /* util */
-_WINDLL_FUNC void SetHttpNonblock( int sock );
+struct HttpUri
+{
+	char				*dirname_base ;
+	int				dirname_len ;
+	char				*filename_base ;
+	int				filename_len ;
+	char				*main_filename_base ;
+	int				main_filename_len ;
+	char				*ext_filename_base ;
+	int				ext_filename_len ;
+	char				*param_base ;
+	int				param_len ;
+} ;
+
+_WINDLL_FUNC int SplitHttpUri( char *wwwroot , char *uri , int uri_len , struct HttpUri *p_httpuri );
+
+#define SetHttpReuseAddr(_sock_) \
+	{ \
+		int	onoff = 1 ; \
+		setsockopt( _sock_ , SOL_SOCKET , SO_REUSEADDR , (void *) & onoff , sizeof(int) ); \
+	}
+
+#if ( defined __linux ) || ( defined __unix )
+#define SetHttpNonblock(_sock_) \
+	{ \
+		int	opts; \
+		opts = fcntl( _sock_ , F_GETFL ); \
+		opts |= O_NONBLOCK ; \
+		fcntl( _sock_ , F_SETFL , opts ); \
+	}
+#define SetHttpBlock(_sock_) \
+	{ \
+		int	opts; \
+		opts = fcntl( _sock_ , F_GETFL ); \
+		opts &= ~O_NONBLOCK ; \
+		fcntl( _sock_ , F_SETFL , opts ); \
+	}
+#elif ( defined _WIN32 )
+#define SetHttpNonblock(_sock_) \
+	{ \
+		u_long	mode = 1 ; \
+		ioctlsocket( _sock_ , FIONBIO , & mode ); \
+	}
+#define SetHttpBlock(_sock_) \
+	{ \
+		u_long	mode = 0 ; \
+		ioctlsocket( _sock_ , FIONBIO , & mode ); \
+	}
+#endif
+
+#define SetHttpNodelay(_sock_,_onoff_) \
+	{ \
+		int	onoff = _onoff_ ; \
+		setsockopt( _sock_ , IPPROTO_TCP , TCP_NODELAY , (void*) & onoff , sizeof(int) ); \
+	}
+
+#define SetHttpNoLinger(_sock_,_linger_) \
+	{ \
+		struct linger   lg; \
+		if( _linger_ >= 0 ) \
+		{ \
+			lg.l_onoff = 1 ; \
+			lg.l_linger = _linger_ ; \
+		} \
+		else \
+		{ \
+			lg.l_onoff = 0 ; \
+			lg.l_linger = 0 ; \
+		} \
+		setsockopt( _sock_ , SOL_SOCKET , SO_LINGER , (void*) & lg , sizeof(struct linger) ); \
+	}
+
+#define SetHttpCloseExec(_sock_) \
+	{ \
+		int	val ; \
+		val = fcntl( _sock_ , F_GETFD ) ; \
+		val |= FD_CLOEXEC ; \
+		fcntl( _sock_ , F_SETFD , val ); \
+	}
+
 _WINDLL_FUNC char *TokenHttpHeaderValue( char *str , char **pp_token , int *p_token_len );
 
 #ifdef __cplusplus

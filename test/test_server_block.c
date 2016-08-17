@@ -33,10 +33,19 @@ int ProcessHttpRequest( struct HttpEnv *e , void *p )
 	printf( "HTTP BODY    [%.*s]\n" , GetHttpBodyLen(e) , GetHttpBodyPtr(e,NULL) );
 	
 	b = GetHttpResponseBuffer(e) ;
-	nret = StrcatHttpBuffer( b ,	"Content-Type: text/html\r\n"
-					"Content-Length: 17\r\n"
-					"\r\n"
-					"hello fasterhttp!" ) ;
+	if( GetHttpHeaderLen_METHOD(e) == 4 && MEMCMP( GetHttpHeaderPtr_METHOD(e,NULL) , == , "HEAD" , 4 ) )
+	{
+		nret = StrcatHttpBuffer( b ,	"Content-Type: text/html\r\n"
+						"Content-Length: 17\r\n"
+						"\r\n" );
+	}
+	else
+	{
+		nret = StrcatHttpBuffer( b ,	"Content-Type: text/html\r\n"
+						"Content-Length: 17\r\n"
+						"\r\n"
+						"hello fasterhttp!" ) ;
+	}
 	if( nret )
 	{
 		printf( "StrcatfHttpBuffer failed , errno[%d]\n" , errno );
