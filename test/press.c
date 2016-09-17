@@ -18,8 +18,6 @@
     "__utmz=xxxxxxxxx.xxxxxxxxxx.x.x.utmccn=(referral)|utmcsr=reader.livedoor.com|utmcct=/reader/|utmcmd=referral\r\n"             \
     "\r\n"
 
-void SetHttpBufferPtr( struct HttpBuffer *b , char *ptr , long len );
-
 static int press( int count )
 {
 	struct HttpEnv		*e = NULL ;
@@ -71,7 +69,7 @@ static int press( int count )
 		ResetHttpEnv( e );
 		
 		b = GetHttpRequestBuffer( e ) ;
-		SetHttpBufferPtr( b , REQ , sizeof(REQ) ) ;
+		SetHttpBufferPtr( b , sizeof(REQ) , REQ ) ;
 		
 		nret = ParseHttpRequest( e ) ;
 		if( UNLIKELY(nret) )

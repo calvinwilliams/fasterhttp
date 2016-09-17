@@ -1,12 +1,17 @@
-ver 1.1.1	2016-08-12	calvin
-		* Add function 'SplitHttpUri'
+1.1.2	2016-09-17	calvin
+	* Add functions for HttpBuffer
+	* Set response body data by refrence mode
+	* Improve performance
 
-ver 1.1.0	2016-08-09	calvin
-		* Support HTTP METHOD 'HEAD'
+1.1.1	2016-08-12	calvin
+	* Add function 'SplitHttpUri'
 
-ver 1.0.0	2016-07-10	calvin
-		* The First Version
+1.1.0	2016-08-09	calvin
+	* Support HTTP METHOD 'HEAD'
 
-ver 0.1.0	2016-06-06	calvin
-		* Created
+1.0.0	2016-07-10	calvin
+	* The First Version
+
+0.1.0	2016-06-06	calvin
+	* Created
 
