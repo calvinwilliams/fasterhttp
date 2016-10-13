@@ -1,3 +1,6 @@
+1.2.1		2016-11-13	calvin
+		* Fixed a bug about recv buffer
+
 1.2.0		2016-10-22	calvin
 		* Adjust function 'FormatHttpResponseStartLine' prototype
 		* Add some auxiliary functions
