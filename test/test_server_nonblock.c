@@ -154,20 +154,20 @@ int test_server_nonblock()
 			{
 				printf( "ReceiveHttpRequestNonblock failed[%d]\n" , nret );
 				
-				nret = FormatHttpResponseStartLine( abs(nret)/100 , e , 1 ) ;
+				nret = FormatHttpResponseStartLine( abs(nret)/100 , e , 1 , NULL ) ;
 				if( nret )
 					break;
 			}
 			else
 			{
-				nret = FormatHttpResponseStartLine( HTTP_OK , e , 0 ) ;
+				nret = FormatHttpResponseStartLine( HTTP_OK , e , 0 , NULL ) ;
 				if( nret )
 					break;
 				
 				nret = ProcessHttpRequest( e , (void*)(&accept_sock) ) ;
 				if( nret != HTTP_OK )
 				{
-					nret = FormatHttpResponseStartLine( nret , e , 1 ) ;
+					nret = FormatHttpResponseStartLine( nret , e , 1 , NULL ) ;
 					if( nret )
 						break;
 				}
