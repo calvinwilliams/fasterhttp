@@ -1,3 +1,6 @@
+1.2.1		2016-11-13	calvin
+		* 紧急修复接收缓冲区的一个溢出问题
+
 1.2.0		2016-10-22	calvin
 		* 调整了函数FormatHttpResponseStartLine原型
 		* 新增一批辅助函数
