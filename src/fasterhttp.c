@@ -2702,8 +2702,6 @@ int StrcatHttpBuffer( struct HttpBuffer *b , char *str )
 	return 0;
 }
 
-#include "LOGC.h"
-
 int StrcatfHttpBuffer( struct HttpBuffer *b , char *format , ... )
 {
 	va_list		valist ;
