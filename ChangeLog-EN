@@ -1,3 +1,12 @@
+1.3.0		2017-05-03	calvin
+		* Adjust some function prototype
+		* Add function trigger before sending and after receiving
+		* Adjust processing request function trigger
+		* Add some function to operate HttpBuffer member
+		* Fixed a bug in compressing
+		* Fixed a bug about memory block invalid in HttpBuffer
+		* Add function GetHttpStatusCode to get response status code
+
 1.2.1		2016-11-13	calvin
 		* Fixed a bug about recv buffer
 
