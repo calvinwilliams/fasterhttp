@@ -1,24 +1,13 @@
 #include "fasterhttp.h"
 
 funcProcessHttpRequest ProcessHttpRequest ;
-int ProcessHttpRequest( struct HttpEnv *e , void *p )
+int ProcessHttpRequest( struct HttpEnv *e )
 {
-	SOCKET			sock = *((SOCKET*)p) ;
-	struct sockaddr_in	sockaddr ;
-	SOCKLEN_T		socklen ;
 	struct HttpHeader	*p_header = NULL ;
 	struct HttpBuffer	*b = NULL ;
 	int			nret = 0 ;
 	
-	socklen = sizeof(struct sockaddr) ;
-	nret = getsockname( sock , (struct sockaddr *) & sockaddr , & socklen ) ;
-	if( nret )
-	{
-		printf( "getsockname failed , errno[%d]\n" , errno );
-		return HTTP_INTERNAL_SERVER_ERROR;
-	}
-	
-	printf( "--- %s:%d | [%.*s] [%.*s] [%.*s] ------------------\n" , inet_ntoa(sockaddr.sin_addr) , (int)ntohs(sockaddr.sin_port)
+	printf( "--- [%.*s] [%.*s] [%.*s] ------------------\n"
 		, GetHttpHeaderLen_METHOD(e) , GetHttpHeaderPtr_METHOD(e,NULL)
 		, GetHttpHeaderLen_URI(e) , GetHttpHeaderPtr_URI(e,NULL)
 		, GetHttpHeaderLen_VERSION(e) , GetHttpHeaderPtr_VERSION(e,NULL) );
@@ -117,7 +106,7 @@ int test_server_block()
 		
 		EnableHttpResponseCompressing( e , 1 );
 		
-		nret = ResponseAllHttp( accept_sock , NULL , e , & ProcessHttpRequest , (void*)(&accept_sock) ) ;
+		nret = ResponseAllHttp( accept_sock , NULL , e , & ProcessHttpRequest ) ;
 		if( nret )
 		{
 			printf( "ResponseHttp[%d]\n" , nret );
