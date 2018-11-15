@@ -42,7 +42,7 @@ CLEAN_ADDITION	=	test_SplitHttpUri.o
 #@ make_uninstall_LIBINST
 #@ make_uninstall_HDERINST
 #@ make_uninstall_DFTHDERINST
-include $(MKTPLDIR)/makeobj_$(MKTPLOS).inc
+include $(MKTPL2_HOME)/makeobj_$(MKTPL2_OS).inc
 
 ###### 目标文件依赖关系
 libfasterhttp.so		:	$(c_FILE_o)

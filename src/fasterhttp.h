@@ -27,18 +27,19 @@ extern "C" {
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
+#include <poll.h>
 #elif ( defined _WIN32 )
 #include <winsock2.h>
 #include <mswsock.h>
 #include <windows.h>
 #endif
 
-char *strcasestr(const char *haystack, const char *needle);
+/* char *strcasestr(const char *haystack, const char *needle); */
 
 #include "openssl/ssl.h"
 #include "openssl/err.h"
 
-#include <zlib.h>
+#include "zlib.h"
 
 #if ( defined _WIN32 )
 #ifndef _WINDLL_FUNC
@@ -340,6 +341,7 @@ char *strcasestr(const char *haystack, const char *needle);
 #define HTTP_HEADER_CONNECTION				"Connection"
 #define HTTP_HEADER_CONNECTION__KEEPALIVE		"Keep-Alive"
 #define HTTP_HEADER_CONNECTION__CLOSE			"Close"
+#define HTTP_HEADER_CONTENT_TYPE			"Content-Type"
 
 #define HTTP_COMPRESSALGORITHM_GZIP			MAX_WBITS+16
 #define HTTP_COMPRESSALGORITHM_DEFLATE			MAX_WBITS
@@ -354,6 +356,7 @@ _WINDLL_FUNC void DestroyHttpEnv( struct HttpEnv *e );
 
 /* properties */
 _WINDLL_FUNC void SetHttpTimeout( struct HttpEnv *e , int timeout );
+_WINDLL_FUNC void SetHttpTimeout2( struct HttpEnv *e , struct timeval *p_timeout );
 _WINDLL_FUNC struct timeval *GetHttpElapse( struct HttpEnv *e );
 _WINDLL_FUNC void EnableHttpResponseCompressing( struct HttpEnv *e , int enable_response_compressing );
 
@@ -402,6 +405,7 @@ _WINDLL_FUNC int SendHttpResponseNonblock( SOCKET sock , SSL *ssl , struct HttpE
 /* http parse api */
 _WINDLL_FUNC int ParseHttpResponse( struct HttpEnv *e );
 _WINDLL_FUNC int ParseHttpRequest( struct HttpEnv *e );
+_WINDLL_FUNC int ParseHttpBodyOnlyOnce( struct HttpEnv *e , struct HttpBuffer *b );
 
 /* http header and body */
 _WINDLL_FUNC char *GetHttpHeaderPtr_METHOD( struct HttpEnv *e , int *p_value_len );
@@ -474,6 +478,8 @@ _WINDLL_FUNC int GetHttpBufferLengthUnprocessed( struct HttpBuffer *b );
 _WINDLL_FUNC void CopyHttpHeader_STATUSCODE( struct HttpEnv *e , struct HttpEnv *e2 );
 _WINDLL_FUNC int GetHttpStatusCode( struct HttpEnv *e );
 
+_WINDLL_FUNC void DecreaseHttpTimeout( struct timeval *ptv , struct timeval *t1 , struct timeval *t2 );
+
 /* util */
 #define SetHttpReuseAddr(_sock_) \
 	{ \
@@ -542,6 +548,7 @@ _WINDLL_FUNC int GetHttpStatusCode( struct HttpEnv *e );
 #elif ( defined _WIN32 )
 #define SetHttpCloseExec(_sock_)
 #endif
+
 _WINDLL_FUNC char *TokenHttpHeaderValue( char *str , char **pp_token , int *p_token_len );
 
 struct HttpUri
