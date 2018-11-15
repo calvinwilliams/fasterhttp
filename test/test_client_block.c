@@ -71,6 +71,7 @@ static int TestParseHttpRequest( struct HttpEnv *e , char *str )
 int test_client_block()
 {
 	struct HttpEnv		*e = NULL ;
+	struct timeval		timeout = { 4 , 700000 } ;
 	
 	int			nret = 0 ;
 	
@@ -80,6 +81,11 @@ int test_client_block()
 		printf( "CreateHttpEnv failed , errno[%d]\n" , errno );
 		return -1;
 	}
+	
+	/*
+	SetHttpTimeout( e , timeout.tv_sec );
+	*/
+	SetHttpTimeout2( e , & timeout );
 	
 	nret = TestParseHttpRequest( e , "GET / HTTP/1.1\r\n"
 					"\r\n") ;

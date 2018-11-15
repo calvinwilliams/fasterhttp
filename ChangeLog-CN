@@ -1,3 +1,10 @@
+1.5.0		2018-11-15	calvin
+		* 新增函数SetHttpTimeout2用于更高精度超时 
+		* 改名函数AjustTimeval为DecreaseHttpTimeout
+
+1.4.0		2018-11-14	calvin
+		* 各大实施项目提交记录合并进来
+
 1.3.1		2017-06-11	calvin
 		* 修正了内部缓冲区自动调整时的一个问题
 

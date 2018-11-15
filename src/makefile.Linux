@@ -12,7 +12,7 @@ MAKEFILE_POSTFIX=.Linux
 AR		=	ar
 AFLAGS		=	rv
 SOFLAGS		=	-shared
-ESOFLAGS	=	
+ESOFLAGS	=	-rdynamic	
 
 # c源代码文件宏及推导规则
 CC		=	gcc -g -fPIC -O2 -Wall -Werror -fno-strict-aliasing
@@ -51,16 +51,19 @@ LFLAGS		=	$(_LFLAGS) \
 			-lssl \
 
 ###### 额外宏定义区
-CLEAN_ADDITION	=
+CLEAN_ADDITION	=	test_SplitHttpUri.o
 
 ###### 加载mktpl模板库
 # 最终目标列表
-all	:	$(OBJ) $(OBJ2) $(LIB) $(LIB2) $(SQL) $(NOCLEAN_OBJ) $(NOINST_OBJ) $(BIN) $(BIN2)
+all		:	$(OBJ) $(OBJ2) $(LIB) $(LIB2) $(SQL) $(NOINST_OBJ) $(BIN) $(BIN2)
+
+prepro_all	:	$(PREPRO)
+
 
 # 文件系统宏
 CD		=	cd
 RM		=	rm -f
-CP		=	cp -f
+CP		=	cp -rf
 MV		=	mv -f
 MKDIR		=	mkdir -p
 
@@ -83,70 +86,95 @@ DFTHDER		=	$(csm_FILE_DFTHDER) $(cui_FILE_DFTHDER) $(dtd_FILE_DFTHDER) $(prt_FIL
 .PHONY:install
 install		:	all
 
-ifneq ($(strip $(LIB)),)
 ifneq ($(strip $(LIBINST)),)
 	@if [ ! -d "$(LIBINST)" ] ; then \
 		echo $(MKDIR) $(LIBINST) ; \
 		$(MKDIR) $(LIBINST) ; \
-	fi ; \
-	for FILE in `echo $(LIB)` ; do \
-		echo $(CP) $$FILE $(LIBINST)/ ; \
-		$(RM) $(LIBINST)/$$FILE ; \
-		$(CP) $$FILE $(LIBINST)/ ; \
+	fi
+ifneq ($(strip $(LIB)),)
+	@for FILE in `echo $(LIB)` ; do \
+		if [ -f $(LIBINST)/$$FILE ] ; then \
+			echo $(RM) $(LIBINST)/$$FILE ; \
+			$(RM) $(LIBINST)/$$FILE ; \
+		fi ; \
+		if [ -f $$FILE ] ; then \
+			echo $(CP) $$FILE $(LIBINST)/ ; \
+			$(CP) $$FILE $(LIBINST)/ ; \
+		fi ; \
 	done
 endif
 endif
-ifneq ($(strip $(LIB2)),)
 ifneq ($(strip $(LIBINST2)),)
 	@if [ ! -d "$(LIBINST2)" ] ; then \
 		echo $(MKDIR) $(LIBINST2) ; \
 		$(MKDIR) $(LIBINST2) ; \
-	fi ; \
-	for FILE in `echo $(LIB2)` ; do \
-		echo $(CP) $$FILE $(LIBINST2)/ ; \
-		$(RM) $(LIBINST2)/$$FILE ; \
-		$(CP) $$FILE $(LIBINST2)/ ; \
+	fi
+ifneq ($(strip $(LIB2)),)
+	@for FILE in `echo $(LIB2)` ; do \
+		if [ -f $(LIBINST2)/$$FILE ] ; then \
+			echo $(RM) $(LIBINST2)/$$FILE ; \
+			$(RM) $(LIBINST2)/$$FILE ; \
+		fi ; \
+		if [ -f $$FILE ] ; then \
+			echo $(CP) $$FILE $(LIBINST2)/ ; \
+			$(CP) $$FILE $(LIBINST2)/ ; \
+		fi ; \
 	done
 endif
 endif
 
-ifneq ($(strip $(HDER)),)
 ifneq ($(strip $(HDERINST)),)
 	@if [ ! -d "$(HDERINST)" ] ; then \
 		echo $(MKDIR) $(HDERINST) ; \
 		$(MKDIR) $(HDERINST) ; \
-	fi ; \
-	for FILE in `echo $(HDER)` ; do \
-		echo $(CP) $$FILE $(HDERINST)/ ; \
-		$(RM) $(HDERINST)/$$FILE ; \
-		$(CP) $$FILE $(HDERINST)/ ; \
+	fi
+ifneq ($(strip $(HDER)),)
+	@for FILE in `echo $(HDER)` ; do \
+		if [ -f $(HDERINST)/$$FILE ] ; then \
+			echo $(RM) $(HDERINST)/$$FILE ; \
+			$(RM) $(HDERINST)/$$FILE ; \
+		fi ; \
+		if [ -f $$FILE ] ; then \
+			echo $(CP) $$FILE $(HDERINST)/ ; \
+			$(CP) $$FILE $(HDERINST)/ ; \
+		fi ; \
 	done
 endif
 endif
-ifneq ($(strip $(HDER2)),)
 ifneq ($(strip $(HDERINST2)),)
 	@if [ ! -d "$(HDERINST2)" ] ; then \
 		echo $(MKDIR) $(HDERINST2) ; \
 		$(MKDIR) $(HDERINST2) ; \
-	fi ; \
-	for FILE in `echo $(HDER2)` ; do \
-		echo $(CP) $$FILE $(HDERINST2)/ ; \
-		$(RM) $(HDERINST2)/$$FILE ; \
-		$(CP) $$FILE $(HDERINST2)/ ; \
+	fi
+ifneq ($(strip $(HDER2)),)
+	@for FILE in `echo $(HDER2)` ; do \
+		if [ -f $(HDERINST2)/$$FILE ] ; then \
+			echo $(RM) $(HDERINST2)/$$FILE ; \
+			$(RM) $(HDERINST2)/$$FILE ; \
+		fi ; \
+		if [ -f $$FILE ] ; then \
+			echo $(CP) $$FILE $(HDERINST2)/ ; \
+			$(CP) $$FILE $(HDERINST2)/ ; \
+		fi ; \
 	done
 endif
 endif
 
-ifneq ($(strip $(DFTHDER)),)
 ifneq ($(strip $(DFTHDERINST)),)
 	@if [ ! -d "$(DFTHDERINST)" ] ; then \
 		echo $(MKDIR) $(DFTHDERINST) ; \
 		$(MKDIR) $(DFTHDERINST) ; \
-	fi ; \
-	for FILE in `echo $(DFTHDER)` ; do \
-		echo $(CP) $$FILE $(DFTHDERINST)/ ; \
-		$(RM) $(DFTHDERINST)/$$FILE ; \
-		$(CP) $$FILE $(DFTHDERINST)/ ; \
+	fi
+ifneq ($(strip $(DFTHDER)),)
+	@for FILE in `echo $(DFTHDER)` ; do \
+		if [ -f $(DFTHDERINST)/$$FILE ] ; then \
+			echo $(RM) $(DFTHDERINST)/$$FILE ; \
+			$(RM) $(DFTHDERINST)/$$FILE ; \
+		fi ; \
+		if [ -f $$FILE ] ; then \
+			echo $(CP) $$FILE $(DFTHDERINST)/ ; \
+			$(CP) $$FILE $(DFTHDERINST)/ ; \
+		fi ; \
 	done
 endif
 endif
@@ -162,16 +190,20 @@ uninstall		:
 ifneq ($(strip $(LIB)),)
 ifneq ($(strip $(LIBINST)),)
 	@for FILE in `echo $(LIB)` ; do \
-		echo $(RM) $(LIBINST)/$$FILE ; \
-		$(RM) $(LIBINST)/$$FILE ; \
+		if [ -f $(LIBINST)/$$FILE ] ; then \
+			echo $(RM) $(LIBINST)/$$FILE ; \
+			$(RM) $(LIBINST)/$$FILE ; \
+		fi ; \
 	done
 endif
 endif
 ifneq ($(strip $(LIB2)),)
 ifneq ($(strip $(LIBINST2)),)
 	@for FILE in `echo $(LIB2)` ; do \
-		echo $(RM) $(LIBINST2)/$$FILE ; \
-		$(RM) $(LIBINST2)/$$FILE ; \
+		if [ -f $(LIBINST2)/$$FILE ] ; then \
+			echo $(RM) $(LIBINST2)/$$FILE ; \
+			$(RM) $(LIBINST2)/$$FILE ; \
+		fi ; \
 	done
 endif
 endif
@@ -179,16 +211,20 @@ endif
 ifneq ($(strip $(HDER)),)
 ifneq ($(strip $(HDERINST)),)
 	@for FILE in `echo $(HDER)` ; do \
-		echo $(RM) $(HDERINST)/$$FILE ; \
-		$(RM) $(HDERINST)/$$FILE ; \
+		if [ -f $(HDERINST)/$$FILE ] ; then \
+			echo $(RM) $(HDERINST)/$$FILE ; \
+			$(RM) $(HDERINST)/$$FILE ; \
+		fi ; \
 	done
 endif
 endif
 ifneq ($(strip $(HDER2)),)
 ifneq ($(strip $(HDERINST2)),)
 	@for FILE in `echo $(HDER2)` ; do \
-		echo $(RM) $(HDERINST2)/$$FILE ; \
-		$(RM) $(HDERINST2)/$$FILE ; \
+		if [ -f $(HDERINST2)/$$FILE ] ; then \
+			echo $(RM) $(HDERINST2)/$$FILE ; \
+			$(RM) $(HDERINST2)/$$FILE ; \
+		fi ; \
 	done
 endif
 endif
@@ -196,8 +232,10 @@ endif
 ifneq ($(strip $(DFTHDER)),)
 ifneq ($(strip $(DFTHDERINST)),)
 	@for FILE in `echo $(DFTHDER)` ; do \
-		echo $(RM) $(DFTHDERINST)/$$FILE ; \
-		$(RM) $(DFTHDERINST)/$$FILE ; \
+		if [ -f $(DFTHDERINST)/$$FILE ] ; then \
+			echo $(RM) $(DFTHDERINST)/$$FILE ; \
+			$(RM) $(DFTHDERINST)/$$FILE ; \
+		fi ; \
 	done
 endif
 endif
